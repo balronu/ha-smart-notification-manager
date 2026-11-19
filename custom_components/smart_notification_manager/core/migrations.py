@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 
-CURRENT_SCHEMA_VERSION = 6
+CURRENT_SCHEMA_VERSION = 7
 
 
 def apply_migrations(connection: sqlite3.Connection) -> None:
@@ -38,6 +38,8 @@ def apply_migrations(connection: sqlite3.Connection) -> None:
                 _migration_v5(connection)
             elif next_version == 6:
                 _migration_v6(connection)
+            elif next_version == 7:
+                _migration_v7(connection)
             else:  # pragma: no cover - guarded by CURRENT_SCHEMA_VERSION
                 raise RuntimeError(f"missing migration {next_version}")
             connection.execute(f"PRAGMA user_version = {next_version}")
@@ -367,6 +369,47 @@ def _migration_v6(connection: sqlite3.Connection) -> None:
             occurred_at TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS ix_policy_decisions_rule_time ON policy_decisions(rule_id, occurred_at);
+        """,
+    )
+
+
+def _migration_v7(connection: sqlite3.Connection) -> None:
+    """Add the Phase-6 alarm-center metadata without changing alarm IDs."""
+
+    _execute_sql_statements(
+        connection,
+        """
+        ALTER TABLE alarm_instances ADD COLUMN category TEXT NOT NULL DEFAULT 'Sonstiges';
+        ALTER TABLE alarm_instances ADD COLUMN category_id TEXT;
+        CREATE INDEX IF NOT EXISTS ix_alarm_center_filter
+            ON alarm_instances(alarm_state, priority, category_id, started_at);
+        CREATE TABLE IF NOT EXISTS alarm_categories (
+            category_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE,
+            enabled INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0, 1)),
+            created_by TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_by TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS saved_alarm_filters (
+            filter_id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            definition_json TEXT NOT NULL,
+            is_default INTEGER NOT NULL DEFAULT 0 CHECK (is_default IN (0, 1)),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(user_id, name)
+        );
+        CREATE INDEX IF NOT EXISTS ix_saved_alarm_filters_user
+            ON saved_alarm_filters(user_id, is_default, updated_at);
+        CREATE TABLE IF NOT EXISTS alarm_user_roles (
+            user_id TEXT PRIMARY KEY,
+            role TEXT NOT NULL CHECK (role IN ('acknowledger', 'read_only')),
+            updated_by TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
         """,
     )
 

@@ -6,6 +6,7 @@ import logging
 import sqlite3
 from dataclasses import asdict, replace
 from datetime import UTC, datetime
+from functools import wraps
 from typing import Any
 
 import probatio
@@ -14,6 +15,7 @@ from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
 from .core.adapters import DeliveryRequest
+from .core.alarm_center import AlarmCenterStore
 from .core.alarm_lifecycle import AlarmLifecycleStore, AlarmPolicy, alarm_to_dict
 from .core.delivery_store import DeliveryStore, PolicySuppressedError
 from .core.entity_catalog import list_entity_snapshots
@@ -26,6 +28,35 @@ from .core.rule_store import EditorAccess, RuleStore, rule_from_editor_payload, 
 _LOGGER = logging.getLogger(__name__)
 
 
+def _require_alarm_role(required: str):
+    """Authorize legacy alarm commands using the same Phase-6 role model."""
+
+    def decorator(handler):
+        @wraps(handler)
+        async def wrapped(hass, connection, msg):
+            try:
+                user_id = _user_id(connection)
+                role = await _alarm_center_store(hass).async_role(
+                    user_id, is_admin=bool(getattr(connection.user, "is_admin", False))
+                )
+                allowed = (
+                    required == "read" and role in {"admin", "acknowledger", "read_only"}
+                ) or (required == "acknowledger" and role in {"admin", "acknowledger"}) or (
+                    required == "admin" and role == "admin"
+                )
+                if not allowed:
+                    connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Für diese Alarmaktion fehlt die Berechtigung.")
+                    return
+            except (PermissionError, RuntimeError, sqlite3.Error):
+                connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Authentifizierter Alarmzugriff erforderlich.")
+                return
+            return await handler(hass, connection, msg)
+
+        return wrapped
+
+    return decorator
+
+
 def async_register(hass: HomeAssistant) -> None:
     """Register the editor commands once per Home Assistant process."""
 
@@ -35,7 +66,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, websocket_save)
     websocket_api.async_register_command(hass, websocket_delete)
     websocket_api.async_register_command(hass, websocket_duplicate)
-    for handler in (websocket_recipient_list, websocket_recipient_save, websocket_recipient_delete, websocket_group_save, websocket_channel_save, websocket_channel_group_save, websocket_channel_group_delete, websocket_template_save, websocket_template_delete, websocket_routing_preview, websocket_rule_routing_save, websocket_delivery_enqueue, websocket_delivery_list, websocket_alarm_list, websocket_alarm_trigger, websocket_alarm_events, websocket_alarm_acknowledge, websocket_alarm_acknowledge_many, websocket_alarm_resolve, websocket_alarm_close, websocket_policy_list, websocket_policy_quiet_save, websocket_policy_pause_save, websocket_policy_pause_resume, websocket_policy_rate_limit_save, websocket_policy_dependency_save, websocket_policy_observation_save, websocket_policy_evaluate):
+    for handler in (websocket_recipient_list, websocket_recipient_save, websocket_recipient_delete, websocket_group_save, websocket_channel_save, websocket_channel_group_save, websocket_channel_group_delete, websocket_template_save, websocket_template_delete, websocket_routing_preview, websocket_rule_routing_save, websocket_delivery_enqueue, websocket_delivery_list, websocket_alarm_list, websocket_alarm_trigger, websocket_alarm_events, websocket_alarm_acknowledge, websocket_alarm_acknowledge_many, websocket_alarm_resolve, websocket_alarm_close, websocket_alarm_center_list, websocket_alarm_center_detail, websocket_alarm_category_list, websocket_alarm_category_save, websocket_alarm_category_deactivate, websocket_alarm_filter_list, websocket_alarm_filter_save, websocket_alarm_filter_delete, websocket_alarm_role_save, websocket_policy_list, websocket_policy_quiet_save, websocket_policy_pause_save, websocket_policy_pause_resume, websocket_policy_rate_limit_save, websocket_policy_dependency_save, websocket_policy_observation_save, websocket_policy_evaluate):
         websocket_api.async_register_command(hass, handler)
     hass.data[DOMAIN]["websocket_registered"] = True
 
@@ -279,7 +310,7 @@ async def websocket_rule_routing_save(hass: HomeAssistant, connection, msg: dict
         _send_storage_error(connection, msg, err)
 
 
-@websocket_api.require_admin
+@_require_alarm_role("admin")
 @websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/delivery/enqueue", probatio.Required("request"): dict, probatio.Required("channel_id"): str, probatio.Required("idempotency_key"): str})
 @websocket_api.async_response
 async def websocket_delivery_enqueue(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
@@ -318,18 +349,25 @@ async def websocket_delivery_enqueue(hass: HomeAssistant, connection, msg: dict[
         _send_storage_error(connection, msg, err)
 
 
-@websocket_api.require_admin
+@_require_alarm_role("read")
 @websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/delivery/list"})
 @websocket_api.async_response
 async def websocket_delivery_list(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     try:
         jobs = await DeliveryStore(_recipient_store(hass).repository).async_list()
+        if _alarm_center_store_if_loaded(hass) is not None:
+            user_id = _user_id(connection)
+            role = await _alarm_center_store(hass).async_role(user_id, is_admin=bool(getattr(connection.user, "is_admin", False)))
+            if role != "admin":
+                visible = await _alarm_center_store(hass).async_list_alarms(user_id=user_id, role=role, page=1, page_size=100)
+                visible_ids = {item["alarm_id"] for item in visible["alarms"]}
+                jobs = [job for job in jobs if job.alarm_id in visible_ids]
         connection.send_result(msg["id"], {"jobs": [_job_to_dict(job) for job in jobs]})
     except (RuntimeError, sqlite3.Error) as err:
         _send_storage_error(connection, msg, err)
 
 
-@websocket_api.require_admin
+@_require_alarm_role("read")
 @websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/alarm/list"})
 @websocket_api.async_response
 async def websocket_alarm_list(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
@@ -337,7 +375,14 @@ async def websocket_alarm_list(hass: HomeAssistant, connection, msg: dict[str, A
 
     try:
         states = tuple(msg.get("states", ())) or None
-        alarms = await _alarm_store(hass).async_list(states=states)
+        if _alarm_center_store_if_loaded(hass) is None:
+            alarms = await _alarm_store(hass).async_list(states=states)
+        else:
+            user_id = _user_id(connection)
+            role = await _alarm_center_store(hass).async_role(user_id, is_admin=bool(getattr(connection.user, "is_admin", False)))
+            result = await _alarm_center_store(hass).async_list_alarms(user_id=user_id, role=role, filters={"states": list(states or ())}, page=1, page_size=100)
+            connection.send_result(msg["id"], {"alarms": result["alarms"]})
+            return
         connection.send_result(msg["id"], {"alarms": [alarm_to_dict(item) for item in alarms]})
     except (KeyError, TypeError, ValueError):
         connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Der Alarmfilter ist ungültig.")
@@ -345,12 +390,13 @@ async def websocket_alarm_list(hass: HomeAssistant, connection, msg: dict[str, A
         _send_alarm_storage_error(connection, msg, err)
 
 
-@websocket_api.require_admin
+@_require_alarm_role("admin")
 @websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/alarm/trigger", probatio.Required("request"): dict})
 @websocket_api.async_response
 async def websocket_alarm_trigger(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     try:
         value = msg["request"]
+        source_rule = await _store(hass).async_get(value["rule_id"], version=value.get("rule_version"))
         policy = AlarmPolicy(
             delay_seconds=int(value.get("delay_seconds", 0)),
             repeat_interval_seconds=int(value.get("repeat_interval_seconds", 0)),
@@ -366,6 +412,7 @@ async def websocket_alarm_trigger(hass: HomeAssistant, connection, msg: dict[str
             rule_id=value["rule_id"], entity_id=value["entity_id"], friendly_name=str(value.get("friendly_name", "")),
             area_id=value.get("area_id"), area_name=value.get("area_name"), priority=str(value.get("priority", "normal")),
             previous_state=value.get("previous_state"), current_state=value.get("current_state"), now=datetime.fromisoformat(value["now"]) if value.get("now") else datetime.now(UTC), policy=policy, rule_version=value.get("rule_version"),
+            category=source_rule.category if source_rule else "Sonstiges",
         )
         connection.send_result(msg["id"], {"alarm": alarm_to_dict(alarm), "created": created})
     except (KeyError, TypeError, ValueError, PermissionError):
@@ -374,17 +421,21 @@ async def websocket_alarm_trigger(hass: HomeAssistant, connection, msg: dict[str
         _send_alarm_storage_error(connection, msg, err)
 
 
-@websocket_api.require_admin
+@_require_alarm_role("read")
 @websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/alarm/events", probatio.Required("alarm_id"): str})
 @websocket_api.async_response
 async def websocket_alarm_events(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     try:
-        connection.send_result(msg["id"], {"events": await _alarm_store(hass).async_events(msg["alarm_id"])})
+        if _alarm_center_store_if_loaded(hass) is not None:
+            detail = await _alarm_center_store(hass).async_detail(msg["alarm_id"], user_id=_user_id(connection), role=await _alarm_center_store(hass).async_role(_user_id(connection), is_admin=bool(getattr(connection.user, "is_admin", False))))
+            connection.send_result(msg["id"], {"events": detail["events"]})
+        else:
+            connection.send_result(msg["id"], {"events": await _alarm_store(hass).async_events(msg["alarm_id"])})
     except (RuntimeError, sqlite3.Error) as err:
         _send_alarm_storage_error(connection, msg, err)
 
 
-@websocket_api.require_admin
+@_require_alarm_role("acknowledger")
 @websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/alarm/acknowledge", probatio.Required("request"): dict})
 @websocket_api.async_response
 async def websocket_alarm_acknowledge(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
@@ -400,7 +451,7 @@ async def websocket_alarm_acknowledge(hass: HomeAssistant, connection, msg: dict
         _send_alarm_storage_error(connection, msg, err)
 
 
-@websocket_api.require_admin
+@_require_alarm_role("acknowledger")
 @websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/alarm/acknowledge_many", probatio.Required("request"): dict})
 @websocket_api.async_response
 async def websocket_alarm_acknowledge_many(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
@@ -416,7 +467,7 @@ async def websocket_alarm_acknowledge_many(hass: HomeAssistant, connection, msg:
         _send_alarm_storage_error(connection, msg, err)
 
 
-@websocket_api.require_admin
+@_require_alarm_role("admin")
 @websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/alarm/resolve", probatio.Required("alarm_id"): str})
 @websocket_api.async_response
 async def websocket_alarm_resolve(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
@@ -440,7 +491,7 @@ async def websocket_alarm_resolve(hass: HomeAssistant, connection, msg: dict[str
         _send_alarm_storage_error(connection, msg, err)
 
 
-@websocket_api.require_admin
+@_require_alarm_role("admin")
 @websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/alarm/close", probatio.Required("request"): dict})
 @websocket_api.async_response
 async def websocket_alarm_close(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
@@ -454,6 +505,97 @@ async def websocket_alarm_close(hass: HomeAssistant, connection, msg: dict[str, 
         connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Der Alarm kann nicht manuell abgeschlossen werden.")
     except (RuntimeError, sqlite3.Error) as err:
         _send_alarm_storage_error(connection, msg, err)
+
+
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/alarm_center/list"})
+@websocket_api.async_response
+async def websocket_alarm_center_list(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        user_id = _user_id(connection)
+        role = await _alarm_center_store(hass).async_role(user_id, is_admin=bool(getattr(connection.user, "is_admin", False)))
+        result = await _alarm_center_store(hass).async_list_alarms(user_id=user_id, role=role, filters=msg.get("filters"), page=msg.get("page", 1), page_size=msg.get("page_size", 25), sort=msg.get("sort", "newest"), group_by=msg.get("group_by"))
+        connection.send_result(msg["id"], {**result, "role": role})
+    except PermissionError as err:
+        connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, str(err))
+    except (KeyError, TypeError, ValueError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Filter der Alarmübersicht sind ungültig.")
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_alarm_storage_error(connection, msg, err)
+
+
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/alarm_center/detail", probatio.Required("alarm_id"): str})
+@websocket_api.async_response
+async def websocket_alarm_center_detail(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        user_id = _user_id(connection)
+        role = await _alarm_center_store(hass).async_role(user_id, is_admin=bool(getattr(connection.user, "is_admin", False)))
+        connection.send_result(msg["id"], await _alarm_center_store(hass).async_detail(msg["alarm_id"], user_id=user_id, role=role))
+    except PermissionError as err:
+        connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, str(err))
+    except (KeyError, TypeError, ValueError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Alarmdetails sind ungültig.")
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_alarm_storage_error(connection, msg, err)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/alarm_category/list"})
+@websocket_api.async_response
+async def websocket_alarm_category_list(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    connection.send_result(msg["id"], {"categories": await _alarm_center_store(hass).async_list_categories(include_disabled=bool(msg.get("include_disabled")))})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/alarm_category/save", probatio.Required("category"): dict})
+@websocket_api.async_response
+async def websocket_alarm_category_save(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        category = await _alarm_center_store(hass).async_save_category(msg["category"], user_id=_user_id(connection), now=datetime.now(UTC))
+        connection.send_result(msg["id"], {"category": category})
+    except (KeyError, TypeError, ValueError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Kategorie ist ungültig.")
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/alarm_category/deactivate", probatio.Required("category_id"): str})
+@websocket_api.async_response
+async def websocket_alarm_category_deactivate(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    await _alarm_center_store(hass).async_deactivate_category(msg["category_id"], user_id=_user_id(connection), now=datetime.now(UTC))
+    connection.send_result(msg["id"], {})
+
+
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/alarm_filter/list"})
+@websocket_api.async_response
+async def websocket_alarm_filter_list(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    connection.send_result(msg["id"], {"filters": await _alarm_center_store(hass).async_list_filters(_user_id(connection))})
+
+
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/alarm_filter/save", probatio.Required("filter"): dict})
+@websocket_api.async_response
+async def websocket_alarm_filter_save(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        saved = await _alarm_center_store(hass).async_save_filter(msg["filter"], user_id=_user_id(connection), now=datetime.now(UTC))
+        connection.send_result(msg["id"], {"filter": saved})
+    except (KeyError, TypeError, ValueError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die persönliche Filteransicht ist ungültig.")
+
+
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/alarm_filter/delete", probatio.Required("filter_id"): str})
+@websocket_api.async_response
+async def websocket_alarm_filter_delete(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    await _alarm_center_store(hass).async_delete_filter(msg["filter_id"], user_id=_user_id(connection))
+    connection.send_result(msg["id"], {})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/alarm_role/save", probatio.Required("user_id"): str, probatio.Required("role"): str})
+@websocket_api.async_response
+async def websocket_alarm_role_save(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        role = await _alarm_center_store(hass).async_save_role(msg["user_id"], msg["role"], updated_by=_user_id(connection), now=datetime.now(UTC))
+        connection.send_result(msg["id"], {"user_id": msg["user_id"], "role": role})
+    except ValueError as err:
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, str(err))
 
 
 @websocket_api.require_admin
@@ -615,6 +757,29 @@ def _alarm_store(hass: HomeAssistant) -> AlarmLifecycleStore:
     if store is None:
         raise RuntimeError("Smart Notification Manager is not configured")
     return store
+
+
+def _alarm_center_store(hass: HomeAssistant) -> AlarmCenterStore:
+    runtime = hass.data.get(DOMAIN, {})
+    store = runtime.get("alarm_center_store")
+    if store is None:
+        alarm_store = runtime.get("alarm_store")
+        if alarm_store is None:
+            raise RuntimeError("Smart Notification Manager is not configured")
+        store = AlarmCenterStore(alarm_store.repository)
+    return store
+
+
+def _alarm_center_store_if_loaded(hass: HomeAssistant) -> AlarmCenterStore | None:
+    return hass.data.get(DOMAIN, {}).get("alarm_center_store")
+
+
+def _user_id(connection) -> str:
+    user = getattr(connection, "user", None)
+    user_id = getattr(user, "id", None)
+    if not user_id:
+        raise PermissionError("authentifizierter Home-Assistant-Benutzer erforderlich")
+    return str(user_id)
 
 
 def _job_to_dict(job) -> dict[str, Any]:

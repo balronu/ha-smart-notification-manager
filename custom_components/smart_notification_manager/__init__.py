@@ -11,6 +11,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import CONF_DB_PATH, DEFAULT_DB_PATH, DOMAIN
+from .core.alarm_center import AlarmCenterStore
 from .core.alarm_lifecycle import AlarmLifecycleStore
 from .core.delivery_service import DeliveryService
 from .core.delivery_store import DeliveryStore
@@ -47,6 +48,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     runtime["recipient_store"] = RecipientStore(repository)
     runtime["delivery_store"] = DeliveryStore(repository)
     runtime["alarm_store"] = AlarmLifecycleStore(repository)
+    runtime["alarm_center_store"] = AlarmCenterStore(repository)
     runtime["policy_store"] = PolicyStore(repository)
     runtime["delivery_service"] = DeliveryService(runtime["delivery_store"], runtime["policy_store"])
     if hasattr(hass, "config"):
@@ -81,6 +83,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     runtime.pop("delivery_store", None)
     runtime.pop("delivery_service", None)
     runtime.pop("alarm_store", None)
+    runtime.pop("alarm_center_store", None)
     runtime.pop("policy_store", None)
     runtime.pop("repository", None)
     return True

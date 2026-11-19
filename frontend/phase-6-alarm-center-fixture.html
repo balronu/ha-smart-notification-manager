@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Phase 6 Alarmzentrale</title></head>
+<body>
+<div id="app"></div>
+<script src="smart-notification-manager.js"></script>
+<script>
+  const center = document.createElement("smart-notification-phase6-alarm-center");
+  center.data = { role: "admin", total: 1, page: 1, pages: 1, alarms: [{ alarm_id: "alarm-1", entity_id: "binary_sensor.fenster", friendly_name: "Fenster Wohnzimmer", area_name: "Wohnzimmer", category: "Sicherheit", alarm_state: "active", priority: "warning", acknowledgement_de: "Nicht quittiert", started_at: "2026-01-01T12:00:00+00:00" }], onAction: (action) => { document.body.dataset.interaction = action; } };
+  document.querySelector("#app").append(center);
+  document.body.dataset.rendered = center.shadowRoot.querySelector('[aria-label="Zentrale Alarmübersicht"]') ? "passed" : "failed";
+</script>
+</body>
+</html>
