@@ -1,0 +1,14 @@
+name: Funktionsvorschlag
+description: Einen Vorschlag einer Entwicklungsphase zuordnen
+body:
+  - type: input
+    id: phase
+    attributes:
+      label: Entwicklungsphase
+  - type: textarea
+    id: description
+    attributes:
+      label: Beschreibung und Abnahmekriterien
+    validations:
+      required: true
+

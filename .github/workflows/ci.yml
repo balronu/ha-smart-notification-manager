@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feature/**"]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: latest
+      - uses: actions/setup-python@v6
+        with:
+          # Use the maintained 3.14 channel; hosted runners may not publish
+          # every individual patch version.
+          python-version: "3.14"
+      - run: uv sync --extra test
+      - run: uv run pytest
+      - run: uv run ruff check .
+      - run: uv run python -m compileall custom_components
+      - run: uv run python -m json.tool custom_components/smart_notification_manager/manifest.json >/dev/null
+      - run: uv run python -m json.tool custom_components/smart_notification_manager/strings.json >/dev/null
+      - run: uv run python -m json.tool hacs.json >/dev/null

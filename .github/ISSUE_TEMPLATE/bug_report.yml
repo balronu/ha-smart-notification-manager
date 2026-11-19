@@ -1,0 +1,15 @@
+name: Fehlerbericht
+description: Einen reproduzierbaren Fehler melden
+body:
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduzierbare Schritte
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Anonymisierte Logs
+      description: Keine Tokens, Nachrichteninhalte oder privaten URLs einfügen.
+

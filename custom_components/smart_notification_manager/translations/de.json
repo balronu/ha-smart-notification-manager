@@ -1,0 +1,8 @@
+{
+  "config": {
+    "step": {"user": {"title": "Smart Notification Manager", "description": "Phase-1-Fundament konfigurieren. Es werden keine Nachrichten versendet.", "data": {"language": "Sprache", "db_path": "Interner Datenbankpfad"}}},
+    "abort": {"already_configured": "Smart Notification Manager ist bereits eingerichtet."}
+  },
+  "options": {"step": {"init": {"title": "Grundkonfiguration", "description": "Nur Fundament-Einstellungen; Versand ist in Phase 1 nicht aktiv.", "data": {"language": "Sprache", "db_path": "Interner Datenbankpfad"}}}}
+}
+

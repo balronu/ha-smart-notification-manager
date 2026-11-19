@@ -1,0 +1,8 @@
+{
+  "config": {
+    "step": {"user": {"title": "Smart Notification Manager", "description": "Configure the Phase 1 foundation. No messages are sent.", "data": {"language": "Language", "db_path": "Internal database path"}}},
+    "abort": {"already_configured": "Smart Notification Manager is already configured."}
+  },
+  "options": {"step": {"init": {"title": "Foundation settings", "description": "Foundation settings only; delivery is inactive in Phase 1.", "data": {"language": "Language", "db_path": "Internal database path"}}}}
+}
+
