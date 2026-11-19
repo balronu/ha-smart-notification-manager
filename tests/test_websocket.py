@@ -3,8 +3,9 @@ from types import SimpleNamespace
 
 import pytest
 from smart_notification_manager.const import DOMAIN
+from smart_notification_manager.core.recipient_store import RecipientStore
 from smart_notification_manager.core.repository import SQLiteRepository
-from smart_notification_manager.core.rule_store import RuleStore, rule_to_dict
+from smart_notification_manager.core.rule_store import EditorAccess, RuleStore, rule_to_dict
 from smart_notification_manager.core.rules import (
     Comparison,
     ConditionNode,
@@ -13,7 +14,14 @@ from smart_notification_manager.core.rules import (
     TriggerDefinition,
     TriggerKind,
 )
-from smart_notification_manager.websocket import websocket_save
+from smart_notification_manager.websocket import (
+    websocket_channel_group_save,
+    websocket_channel_save,
+    websocket_recipient_save,
+    websocket_rule_routing_save,
+    websocket_save,
+    websocket_template_save,
+)
 
 
 class Connection:
@@ -110,3 +118,45 @@ async def test_api_returns_safe_error_when_integration_is_missing():
     connection = Connection()
     await implementation(websocket_save)(SimpleNamespace(data={}), connection, {"id": 4, "rule": rule_to_dict(base_rule())})
     assert connection.errors == [(4, "unknown_error", "Die Regelverwaltung ist derzeit nicht verfügbar.")]
+
+
+@pytest.mark.asyncio
+async def test_recipient_api_persists_devices_without_external_send(tmp_path):
+    store = RecipientStore(SQLiteRepository(tmp_path / "manager.sqlite3"))
+    hass = SimpleNamespace(data={DOMAIN: {"recipient_store": store}})
+    connection = Connection()
+    handler = implementation(websocket_recipient_save)
+    await handler(hass, connection, {"id": 6, "recipient": {"recipient_id": "michael", "display_name": "Michael", "devices": [{"device_id": "phone", "display_name": "Telefon", "channel_id": "mobile", "primary": True, "available": True}]}})
+    assert connection.errors == []
+    assert (await store.async_list_recipients())[0].devices[0].channel_id == "mobile"
+
+
+@pytest.mark.asyncio
+async def test_channel_group_api_round_trip(tmp_path):
+    store = RecipientStore(SQLiteRepository(tmp_path / "manager.sqlite3"))
+    hass = SimpleNamespace(data={DOMAIN: {"recipient_store": store}})
+    connection = Connection()
+    await implementation(websocket_channel_group_save)(
+        hass,
+        connection,
+        {"id": 7, "group": {"channel_group_id": "urgent", "display_name": "Dringend", "channel_ids": []}},
+    )
+    assert connection.errors == []
+    assert connection.results[-1][1]["group"]["display_name"] == "Dringend"
+    assert (await store.async_list_channel_groups())[0]["channel_group_id"] == "urgent"
+
+
+@pytest.mark.asyncio
+async def test_phase3_channel_template_and_rule_routing_websocket_round_trip(tmp_path):
+    repository = SQLiteRepository(tmp_path / "manager.sqlite3")
+    recipient_store = RecipientStore(repository)
+    rule_store = RuleStore(repository)
+    hass = SimpleNamespace(data={DOMAIN: {"recipient_store": recipient_store, "rule_store": rule_store}})
+    connection = Connection()
+    await implementation(websocket_channel_save)(hass, connection, {"id": 8, "channel": {"channel_id": "mobile", "channel_type": "notify", "display_name": "Mobile", "config": {"service": "notify.mobile_app_phone"}}})
+    await implementation(websocket_template_save)(hass, connection, {"id": 9, "template": {"template_id": "door", "name": "Tür", "body": "{{ rule_name }}", "version": 1}})
+    saved = await rule_store.async_save(base_rule(), EditorAccess("ha-admin", frozenset({"admin"})))
+    await implementation(websocket_rule_routing_save)(hass, connection, {"id": 10, "rule_id": saved.rule_id, "routing": {"recipient_ids": ["michael"], "channel_ids": ["mobile"], "all_devices": False}})
+    assert connection.errors == []
+    assert (await rule_store.async_get(saved.rule_id)).routing["channel_ids"] == ["mobile"]
+    assert (await recipient_store.async_list_channels())[0]["channel_id"] == "mobile"

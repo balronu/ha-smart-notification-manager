@@ -14,6 +14,19 @@ verwendet jedoch einen authentifizierten Home-Assistant-WebSocket-Vertrag.
 - `RuleStore`: versioniertes `async_save()`, `async_get()`, `async_list()`, sichere Duplikation und Soft-Delete
 - `EntitySnapshot`: schreibgeschützter Friendly Name, Entity-ID, Bereich, Domain und Zustand aus HA-Registern
 - `EvaluationContext`: reproduzierbarer Zustandssnapshot für die Bedingungsauswertung
+- `RecipientStore`: versionlose, transaktionale Empfänger-, Gruppen-, Kanal- und Vorlagenspeicherung
+- `resolve_recipients()`: deterministische Gruppen-/Geräteauflösung mit Überlappungs-Deduplizierung
+- `build_routing_preview()`: fähigkeitsabhängige Vorschau ohne Adapteraufruf oder Netzwerkzugriff
+- `render_template()`: begrenzte, erlaubte Platzhalter; unbekannte oder ausführbare Syntax wird abgewiesen
+- `DeliveryStore`/`DeliveryService`: idempotente technische Aufträge, Lease-Claims, begrenzte Backoff-Wiederholungen und sichere Statuspersistenz
+- `HAServiceAdapter`: Aufruf eines bereits registrierten `domain.service`; die Capability-Konfiguration bleibt explizit und provider-neutral
+
+Phase 3 registriert zusätzlich die Admin-WebSocket-Befehle
+`smart_notification_manager/recipient/list`, `/recipient/save`, `/group/save`,
+`/channel/save`, `/channel-group/save`, `/channel-group/delete`, `/template/save`, `/template/delete`, `/routing/preview`, `/rule/routing/save`, `/delivery/enqueue` und
+`/delivery/list`. Das Enqueue ruft keinen Dienst auf. Reale Adapter verwenden
+ausschließlich vorhandene Home-Assistant-Dienste und benötigen zusätzlich eine
+explizite Versandfreigabe; ein Anbieter-Accept ist keine Zustellbestätigung.
 
 ## WebSocket-Fehlervertrag
 

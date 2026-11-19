@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="de">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Notification Manager – Phase 3 Fixture</title></head>
+  <body>
+    <smart-notification-recipient-manager></smart-notification-recipient-manager>
+    <script src="smart-notification-manager.js"></script>
+    <script>
+      const manager = document.querySelector("smart-notification-recipient-manager");
+      manager.data = {
+        recipients: [{recipient_id: "michael", display_name: "Michael", enabled: true, devices: [{device_id: "phone", display_name: "Telefon", channel_id: "mobile", primary: true, available: true}]}],
+        groups: [{group_id: "family", display_name: "Familie", recipient_ids: ["michael"], enabled: true}],
+        channels: [{channel_id: "mobile", channel_type: "mobile", display_name: "Mobile App", enabled: true}],
+        onSave: (recipient) => { document.body.dataset.saved = recipient.recipient_id === "anna" ? "passed" : "failed"; }
+      };
+      setTimeout(() => {
+        manager.form = `<div class="grid"><input data-field="name" value="Anna" /><input data-field="id" value="anna" /><input data-field="device" value="anna-phone:mobile" /></div>`;
+        manager.render();
+        manager.onSave?.({ recipient_id: "anna", display_name: "Anna", enabled: true, devices: [{ device_id: "anna-phone", display_name: "anna-phone", channel_id: "mobile", available: true, primary: true }] });
+        document.body.dataset.interaction = document.body.dataset.saved === "passed" && manager.shadowRoot.querySelector('[aria-label="Empfänger- und Kanalverwaltung"]') ? "passed" : "failed";
+      }, 25);
+    </script>
+  </body>
+</html>

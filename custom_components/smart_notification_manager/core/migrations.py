@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 
-CURRENT_SCHEMA_VERSION = 2
+CURRENT_SCHEMA_VERSION = 3
 
 
 def apply_migrations(connection: sqlite3.Connection) -> None:
@@ -30,6 +30,8 @@ def apply_migrations(connection: sqlite3.Connection) -> None:
                 _migration_v1(connection)
             elif next_version == 2:
                 _migration_v2(connection)
+            elif next_version == 3:
+                _migration_v3(connection)
             else:  # pragma: no cover - guarded by CURRENT_SCHEMA_VERSION
                 raise RuntimeError(f"missing migration {next_version}")
             connection.execute(f"PRAGMA user_version = {next_version}")
@@ -201,6 +203,27 @@ def _migration_v2(connection: sqlite3.Connection) -> None:
             CHECK (priority IN ('info', 'normal', 'warning', 'critical'));
         ALTER TABLE rules ADD COLUMN deleted_at TEXT;
         CREATE INDEX IF NOT EXISTS ix_rules_enabled ON rules(enabled, deleted_at);
+        """,
+    )
+
+
+def _migration_v3(connection: sqlite3.Connection) -> None:
+    """Add idempotent delivery-job state without changing alarm history."""
+
+    _execute_sql_statements(
+        connection,
+        """
+        ALTER TABLE delivery_attempts ADD COLUMN idempotency_key TEXT;
+        ALTER TABLE delivery_attempts ADD COLUMN attempt_number INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE delivery_attempts ADD COLUMN next_attempt_at TEXT;
+        ALTER TABLE delivery_attempts ADD COLUMN lease_until TEXT;
+        ALTER TABLE delivery_attempts ADD COLUMN delivery_confirmed INTEGER NOT NULL DEFAULT 0
+            CHECK (delivery_confirmed IN (0, 1));
+        ALTER TABLE delivery_attempts ADD COLUMN payload_json TEXT NOT NULL DEFAULT '{}';
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_delivery_idempotency
+            ON delivery_attempts(idempotency_key) WHERE idempotency_key IS NOT NULL;
+        CREATE INDEX IF NOT EXISTS ix_delivery_due
+            ON delivery_attempts(state, next_attempt_at, lease_until);
         """,
     )
 

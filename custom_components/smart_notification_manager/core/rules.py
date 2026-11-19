@@ -90,6 +90,7 @@ class RuleDefinition:
     version: int
     created_at: datetime
     updated_at: datetime
+    routing: dict[str, Any] = field(default_factory=dict)
 
 
 def new_rule(name: str, *, now: datetime, category: str = "Sonstiges") -> RuleDefinition:
