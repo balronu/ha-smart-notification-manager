@@ -8,4 +8,4 @@ CONF_DB_PATH = "db_path"
 CONF_LANGUAGE = "language"
 DEFAULT_DB_PATH = "smart_notification_manager.sqlite3"
 DEFAULT_LANGUAGE = "de"
-
+SIGNAL_RULES_UPDATED = f"{DOMAIN}_rules_updated"

@@ -12,6 +12,7 @@ from typing import Any
 import probatio
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .const import DOMAIN
 from .core.adapters import DeliveryRequest
@@ -110,6 +111,7 @@ async def websocket_save(hass: HomeAssistant, connection, msg: dict[str, Any]) -
         _send_storage_error(connection, msg, err)
         return
     connection.send_result(msg["id"], {"rule": rule_to_dict(saved)})
+    _notify_rule_update(hass, saved.rule_id)
 
 
 @websocket_api.require_admin
@@ -135,6 +137,7 @@ async def websocket_delete(hass: HomeAssistant, connection, msg: dict[str, Any])
         _send_storage_error(connection, msg, err)
         return
     connection.send_result(msg["id"], {})
+    _notify_rule_update(hass, msg["rule_id"])
 
 
 @websocket_api.require_admin
@@ -304,6 +307,7 @@ async def websocket_rule_routing_save(hass: HomeAssistant, connection, msg: dict
             raise ValueError("Regel nicht gefunden")
         saved = await store.async_save(replace(current, routing=msg["routing"], version=current.version + 1, updated_at=datetime.now(UTC)), EditorAccess(connection.user.id, frozenset({"admin"})))
         connection.send_result(msg["id"], {"rule": rule_to_dict(saved)})
+        _notify_rule_update(hass, saved.rule_id)
     except (KeyError, TypeError, ValueError, PermissionError):
         connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Das Routing der Regel ist ungültig oder darf nicht geändert werden.")
     except (RuntimeError, sqlite3.Error) as err:
@@ -795,6 +799,18 @@ def _job_to_dict(job) -> dict[str, Any]:
         "delivery_confirmed": job.delivery_confirmed,
         "payload": job.payload,
     }
+
+
+def _notify_rule_update(hass: HomeAssistant, rule_id: str) -> None:
+    """Notify native entities when running inside a real HA event loop.
+
+    The guard keeps the pure WebSocket contract tests independent from HA's
+    dispatcher implementation while production Home Assistant always has the
+    event-loop verification method.
+    """
+
+    if hasattr(hass, "verify_event_loop_thread"):
+        async_dispatcher_send(hass, f"{DOMAIN}_rules_updated", rule_id)
 
 
 def _send_storage_error(connection, msg: dict[str, Any], err: Exception) -> None:

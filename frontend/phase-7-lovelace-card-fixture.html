@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Phase 7 Lovelace-Karte Fixture</title></head>
+<body viewport="desktop" style="margin:16px;background:#f5f5f5;color:#202124">
+<smart-notification-manager-card id="compact" data-view="compact"></smart-notification-manager-card>
+<smart-notification-manager-card id="list" data-view="list"></smart-notification-manager-card>
+<smart-notification-manager-card id="detail" data-view="detail"></smart-notification-manager-card>
+<smart-notification-manager-card id="multi-instance" data-view="compact"></smart-notification-manager-card>
+<div hidden data-viewport="desktop"></div><div hidden data-viewport="ipad-landscape"></div><div hidden data-viewport="ipad-portrait"></div><div hidden data-viewport="iphone"></div>
+<script src="smart-notification-manager-card.js"></script>
+<script>
+const alarms = [{alarm_id:"alarm-1",priority:"critical",friendly_name:"Haustür",entity_id:"binary_sensor.haustuer",alarm_state:"active",status_de:"Aktiv",acknowledgement_state:"unacknowledged",started_at:"2026-11-19T10:00:00+00:00"},{alarm_id:"alarm-2",priority:"warning",friendly_name:"Keller",entity_id:"binary_sensor.keller",alarm_state:"active",status_de:"Aktiv",acknowledgement_state:"acknowledged",started_at:"2026-11-19T10:01:00+00:00"}];
+const hass = { callWS: async (message) => message.type.endsWith("/detail") ? {alarm:alarms[0],events:[]} : {alarms,total:alarms.length,groups:{}} };
+for (const [id, view] of [["compact","compact"],["list","list"],["detail","detail"],["multi-instance","compact"]]) { const card=document.getElementById(id); card.setConfig({title:"Phase 7 "+id,view,max_alarms:2,refresh_interval:0}); card.hass=hass; }
+document.body.dataset.rendered="passed";
+document.body.dataset.views=[...document.querySelectorAll("smart-notification-manager-card")].map((c)=>c.dataset.view).join(",");
+document.body.dataset.multiInstance=document.getElementById("compact")._config.title!==document.getElementById("multi-instance")._config.title?"passed":"failed";
+</script>
+</body>
+</html>

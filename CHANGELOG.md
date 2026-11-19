@@ -1,5 +1,13 @@
 # Changelog
 
+## Unveröffentlicht – Phase 7 in Entwicklung
+
+- Eigenständige `custom:smart-notification-manager-card` mit Kompakt-, Listen- und Detailansicht.
+- Authentifizierter WebSocket-Datenzugriff, deutsche Kartenkonfiguration und unabhängige Karteninstanzen.
+- Native Sensoren, Binärsensoren und geschützte Rule-Switches über die bestehende Datenkette.
+- Isolierte responsive Fixture-Prüfung; echte HA-Panel-/Runtime-E2E bleibt Gate #16.
+- Kein Release und kein Tag.
+
 ## Unveröffentlicht – Phase 6 abgeschlossen
 
 - Zentrale Alarmübersicht mit serverseitiger Suche, Filtern, Sortierung,
