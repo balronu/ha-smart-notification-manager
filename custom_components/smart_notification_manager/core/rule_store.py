@@ -144,6 +144,7 @@ class RuleStore:
             version=1,
             created_at=now,
             updated_at=now,
+            routing=rule.routing,
         )
         return await self.async_save(duplicate, access)
 
@@ -168,6 +169,7 @@ def _rule_to_dict(rule: RuleDefinition) -> dict[str, Any]:
         "version": rule.version,
         "created_at": rule.created_at.isoformat(),
         "updated_at": rule.updated_at.isoformat(),
+        "routing": rule.routing,
     }
 
 
@@ -245,6 +247,7 @@ def _rule_from_dict(value: dict[str, Any]) -> RuleDefinition:
         version=int(value["version"]),
         created_at=datetime.fromisoformat(value["created_at"]),
         updated_at=datetime.fromisoformat(value["updated_at"]),
+        routing=dict(value.get("routing", {})),
     )
 
 

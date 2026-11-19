@@ -61,6 +61,12 @@ class RecipientStore:
 
         return await self.repository.async_run(operation)
 
+    async def async_delete_recipient(self, recipient_id: str) -> None:
+        await self.repository.async_run(lambda connection: connection.execute("DELETE FROM recipients WHERE recipient_id=?", (recipient_id,)))
+
+    async def async_delete_channel_group(self, group_id: str) -> None:
+        await self.repository.async_run(lambda connection: connection.execute("DELETE FROM channel_groups WHERE channel_group_id=?", (group_id,)))
+
     async def async_list_channels(self) -> list[dict[str, Any]]:
         def operation(connection):
             return [{"channel_id": row[0], "channel_type": row[1], "display_name": row[2], "enabled": bool(row[3]), "config": json.loads(row[4] or "{}")} for row in connection.execute("SELECT channel_id, channel_type, display_name, enabled, config_json FROM channels ORDER BY display_name COLLATE NOCASE")]
@@ -116,9 +122,21 @@ class RecipientStore:
 
         return await self.repository.async_run(operation)
 
+    async def async_list_templates(self) -> list[dict[str, Any]]:
+        return await self.repository.async_run(lambda connection: [{"template_id": row[0], "name": row[1], "body": row[2], "language": row[3], "version": row[4], "enabled": bool(row[5])} for row in connection.execute("SELECT template_id, name, body, language, version, enabled FROM message_templates ORDER BY name COLLATE NOCASE")])
+
+    async def async_delete_template(self, template_id: str) -> None:
+        await self.repository.async_run(lambda connection: connection.execute("DELETE FROM message_templates WHERE template_id=?", (template_id,)))
+
     async def async_preview(self, payload: dict[str, Any]) -> dict[str, Any]:
-        recipients = tuple(_recipient_from_dict(item) for item in payload.get("recipients", []))
-        groups = tuple(RecipientGroup(item["group_id"], item["display_name"], tuple(item.get("recipient_ids", [])), bool(item.get("enabled", True))) for item in payload.get("groups", []))
+        recipient_values = payload.get("recipients")
+        group_values = payload.get("groups")
+        if recipient_values is None:
+            recipient_values = [asdict(item) for item in await self.async_list_recipients()]
+        if group_values is None:
+            group_values = [asdict(item) for item in await self.async_list_groups()]
+        recipients = tuple(_recipient_from_dict(item) for item in recipient_values)
+        groups = tuple(RecipientGroup(item["group_id"], item["display_name"], tuple(item.get("recipient_ids", [])), bool(item.get("enabled", True))) for item in group_values)
         resolved = resolve_recipients(recipients, groups, tuple(payload.get("recipient_ids", [])), tuple(payload.get("group_ids", [])), all_devices=bool(payload.get("all_devices", False)))
         capabilities = {
             item["channel_id"]: ChannelCapabilities(

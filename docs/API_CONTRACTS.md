@@ -23,7 +23,7 @@ verwendet jedoch einen authentifizierten Home-Assistant-WebSocket-Vertrag.
 
 Phase 3 registriert zusätzlich die Admin-WebSocket-Befehle
 `smart_notification_manager/recipient/list`, `/recipient/save`, `/group/save`,
-`/channel/save`, `/channel-group/save`, `/template/save`, `/routing/preview`, `/delivery/enqueue` und
+`/channel/save`, `/channel-group/save`, `/channel-group/delete`, `/template/save`, `/template/delete`, `/routing/preview`, `/rule/routing/save`, `/delivery/enqueue` und
 `/delivery/list`. Das Enqueue ruft keinen Dienst auf. Reale Adapter verwenden
 ausschließlich vorhandene Home-Assistant-Dienste und benötigen zusätzlich eine
 explizite Versandfreigabe; ein Anbieter-Accept ist keine Zustellbestätigung.

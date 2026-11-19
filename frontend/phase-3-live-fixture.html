@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Notification Manager – Live UI Fixture</title></head>
+<body><smart-notification-phase3-manager></smart-notification-phase3-manager><script src="smart-notification-manager.js"></script><script>
+const manager = document.querySelector("smart-notification-phase3-manager");
+manager.data = {
+  recipients: [{recipient_id: "michael", display_name: "Michael", enabled: true, devices: [{device_id: "phone", display_name: "Telefon", channel_id: "mobile", primary: true, available: true}]}],
+  channels: [{channel_id: "mobile", channel_type: "notify", display_name: "Mobile App", enabled: true, config: {service: "notify.mobile_app_phone"}}],
+  channel_groups: [{channel_group_id: "urgent", display_name: "Dringend", enabled: true, channel_ids: ["mobile"]}],
+  templates: [{template_id: "door", name: "Tür", body: "{{ rule_name }}", version: 1, enabled: true}],
+  rules: [{rule_id: "rule-1", name: "Tür", routing: {}}],
+  jobs: [{attempt_id: "job-1", recipient_id: "michael", channel_id: "mobile", state: "accepted", attempt_number: 1}],
+  onSaveChannelGroup: (value) => { document.body.dataset.groupSaved = value.group_id === undefined && value.channel_group_id === "new-group" ? "passed" : "failed"; },
+  onSaveTemplate: (value) => { document.body.dataset.templateSaved = value.template_id === "new-template" ? "passed" : "failed"; },
+  onPreview: () => { document.body.dataset.preview = "passed"; },
+  onSaveRouting: () => { document.body.dataset.routingSaved = "passed"; }
+};
+setTimeout(() => {
+  try {
+    manager.form = {type: "channel-group", id: "new-group", name: "Neu", channels: "mobile"}; manager.render();
+    manager.click({target: manager.shadowRoot.querySelector('[data-action="save-channel-group"]')});
+    manager.form = {type: "template", id: "new-template", name: "Neu", body: "{{ rule_name }}"}; manager.render();
+    manager.click({target: manager.shadowRoot.querySelector('[data-action="save-template"]')});
+    document.body.dataset.interaction = manager.shadowRoot.querySelector('[aria-label="Phase-3-Liveverwaltung"]') ? "passed" : "failed";
+  } catch (error) { document.body.dataset.fixtureError = String(error); }
+}, 25);
+</script></body></html>

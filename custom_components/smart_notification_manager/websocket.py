@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from dataclasses import asdict
+from dataclasses import asdict, replace
+from datetime import UTC, datetime
 from typing import Any
 
 import probatio
@@ -31,7 +32,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, websocket_save)
     websocket_api.async_register_command(hass, websocket_delete)
     websocket_api.async_register_command(hass, websocket_duplicate)
-    for handler in (websocket_recipient_list, websocket_recipient_save, websocket_group_save, websocket_channel_save, websocket_channel_group_save, websocket_template_save, websocket_routing_preview, websocket_delivery_enqueue, websocket_delivery_list):
+    for handler in (websocket_recipient_list, websocket_recipient_save, websocket_recipient_delete, websocket_group_save, websocket_channel_save, websocket_channel_group_save, websocket_channel_group_delete, websocket_template_save, websocket_template_delete, websocket_routing_preview, websocket_rule_routing_save, websocket_delivery_enqueue, websocket_delivery_list):
         websocket_api.async_register_command(hass, handler)
     hass.data[DOMAIN]["websocket_registered"] = True
 
@@ -139,7 +140,7 @@ async def websocket_recipient_list(hass: HomeAssistant, connection, msg: dict[st
         store = _recipient_store(hass)
         recipients = [asdict(item) for item in await store.async_list_recipients()]
         groups = [asdict(item) for item in await store.async_list_groups()]
-        connection.send_result(msg["id"], {"recipients": recipients, "groups": groups, "channels": await store.async_list_channels(), "channel_groups": await store.async_list_channel_groups()})
+        connection.send_result(msg["id"], {"recipients": recipients, "groups": groups, "channels": await store.async_list_channels(), "channel_groups": await store.async_list_channel_groups(), "templates": await store.async_list_templates()})
     except (RuntimeError, sqlite3.Error) as err:
         _send_storage_error(connection, msg, err)
 
@@ -155,6 +156,17 @@ async def websocket_recipient_save(hass: HomeAssistant, connection, msg: dict[st
         connection.send_result(msg["id"], {"recipient": asdict(saved)})
     except (KeyError, TypeError, ValueError):
         connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Der Empfänger ist ungültig.")
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_storage_error(connection, msg, err)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/recipient/delete", probatio.Required("recipient_id"): str})
+@websocket_api.async_response
+async def websocket_recipient_delete(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        await _recipient_store(hass).async_delete_recipient(msg["recipient_id"])
+        connection.send_result(msg["id"], {})
     except (RuntimeError, sqlite3.Error) as err:
         _send_storage_error(connection, msg, err)
 
@@ -200,6 +212,17 @@ async def websocket_channel_group_save(hass: HomeAssistant, connection, msg: dic
 
 
 @websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/channel-group/delete", probatio.Required("group_id"): str})
+@websocket_api.async_response
+async def websocket_channel_group_delete(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        await _recipient_store(hass).async_delete_channel_group(msg["group_id"])
+        connection.send_result(msg["id"], {})
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_storage_error(connection, msg, err)
+
+
+@websocket_api.require_admin
 @websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/template/save", probatio.Required("template"): dict})
 @websocket_api.async_response
 async def websocket_template_save(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
@@ -213,6 +236,17 @@ async def websocket_template_save(hass: HomeAssistant, connection, msg: dict[str
 
 
 @websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/template/delete", probatio.Required("template_id"): str})
+@websocket_api.async_response
+async def websocket_template_delete(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        await _recipient_store(hass).async_delete_template(msg["template_id"])
+        connection.send_result(msg["id"], {})
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_storage_error(connection, msg, err)
+
+
+@websocket_api.require_admin
 @websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/routing/preview", probatio.Required("payload"): dict})
 @websocket_api.async_response
 async def websocket_routing_preview(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
@@ -221,6 +255,23 @@ async def websocket_routing_preview(hass: HomeAssistant, connection, msg: dict[s
         connection.send_result(msg["id"], preview)
     except (KeyError, TypeError, ValueError):
         connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Routing-Vorschau ist ungültig.")
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_storage_error(connection, msg, err)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/rule/routing/save", probatio.Required("rule_id"): str, probatio.Required("routing"): dict})
+@websocket_api.async_response
+async def websocket_rule_routing_save(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        store = _store(hass)
+        current = await store.async_get(msg["rule_id"])
+        if current is None:
+            raise ValueError("Regel nicht gefunden")
+        saved = await store.async_save(replace(current, routing=msg["routing"], version=current.version + 1, updated_at=datetime.now(UTC)), EditorAccess(connection.user.id, frozenset({"admin"})))
+        connection.send_result(msg["id"], {"rule": rule_to_dict(saved)})
+    except (KeyError, TypeError, ValueError, PermissionError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Das Routing der Regel ist ungültig oder darf nicht geändert werden.")
     except (RuntimeError, sqlite3.Error) as err:
         _send_storage_error(connection, msg, err)
 
