@@ -11,17 +11,16 @@
 | 7 | Lovelace-Alarmkarte, grafischer Karteneditor und native HA-Entitäten | abgeschlossen: PR #28 in `main`, 85 Tests und Main-CI grün; Runtime-/Beta-Gates bleiben offen |
 | 8 | Vorlagen, Regel-Assistent, Simulation und Regelversionierung | abgeschlossen: in `main` integriert, 97 Tests und Main-CI grün |
 | 9 | Sicherer Migrationsassistent für bestehende HA-Automationen | Read-only Analyse, Hybridvorschau, externe Referenzen, Rollback-Schutz und 25 Regressionen |
-| 10 | zweite Lovelace-Karte, Simulation, Beobachtungsmodus | keine-Aktion-Garantie |
+| 10 | zweite Lovelace-Karte, schreibfreie Simulation, Beobachtungsmodus | keine-Aktion-Garantie mit Desktop-/iPad-/iPhone-Fixture |
 | 11 | geführte Migration, Hybridbetrieb, Backup/Rollback | Pilot ohne Sicherheitsquellen |
 | 12 | HACS-/CI-/Release-Readiness und vollständige Integration | alle Gates, keine offenen Pflichttests |
 
-Phase 1 bis Phase 8 sind abgeschlossen und in `main` integriert. Phase 9 ist
-auf einem Feature-Branch in Entwicklung und wird nicht automatisch gemergt. Die
+Phase 1 bis Phase 9 sind abgeschlossen und in `main` integriert. Phase 10 wird
+auf einem separaten Feature-Branch entwickelt und nicht automatisch gemergt. Die
 automatische Zustellung von Alarmwiederholungen und Eskalationen ist als
 verbindlicher Beta-Vorbehalt in Issue #24 offen. Die vollständige
 authentifizierte Home-Assistant-HTTP-/WebSocket-/Panel-E2E-Prüfung bleibt in
 Issue #16 offen. Die Gates #17 Hassfest, #18 HACS und #19 Secret-Scan bleiben
 ebenfalls vor der Beta verbindlich offen. FRITZ!Box und SIP/PBX sind
-vorbereitet, nicht vollständig implementiert. Phase 10 beginnt erst nach
-ausdrücklicher Freigabe.
+vorbereitet, nicht vollständig implementiert.
 Die erste öffentliche Beta bleibt bis zum Abschluss aller zwölf Phasen gesperrt.

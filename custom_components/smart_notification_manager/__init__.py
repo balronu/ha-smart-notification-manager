@@ -80,6 +80,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         frontend.add_extra_js_url(hass, f"{FRONTEND_URL_BASE}/smart-notification-manager-card.js?v=1")
         frontend.add_extra_js_url(hass, f"{FRONTEND_URL_BASE}/phase-8-rule-wizard.js?v=1")
         frontend.add_extra_js_url(hass, f"{FRONTEND_URL_BASE}/phase-9-automation-migration.js?v=1")
+        frontend.add_extra_js_url(hass, f"{FRONTEND_URL_BASE}/smart-notification-manager-observation-card.js?v=1")
         runtime["frontend_registered"] = True
     return True
 
