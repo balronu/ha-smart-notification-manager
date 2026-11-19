@@ -70,7 +70,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, websocket_save)
     websocket_api.async_register_command(hass, websocket_delete)
     websocket_api.async_register_command(hass, websocket_duplicate)
-    for handler in (websocket_recipient_list, websocket_recipient_save, websocket_recipient_delete, websocket_group_save, websocket_channel_save, websocket_channel_group_save, websocket_channel_group_delete, websocket_template_save, websocket_template_delete, websocket_routing_preview, websocket_rule_routing_save, websocket_delivery_enqueue, websocket_delivery_list, websocket_alarm_list, websocket_alarm_trigger, websocket_alarm_events, websocket_alarm_acknowledge, websocket_alarm_acknowledge_many, websocket_alarm_resolve, websocket_alarm_close, websocket_alarm_center_list, websocket_alarm_center_detail, websocket_alarm_category_list, websocket_alarm_category_save, websocket_alarm_category_deactivate, websocket_alarm_filter_list, websocket_alarm_filter_save, websocket_alarm_filter_delete, websocket_alarm_role_save, websocket_policy_list, websocket_policy_quiet_save, websocket_policy_pause_save, websocket_policy_pause_resume, websocket_policy_rate_limit_save, websocket_policy_dependency_save, websocket_policy_observation_save, websocket_policy_evaluate, websocket_phase8_template_list, websocket_phase8_template_save, websocket_phase8_template_delete, websocket_phase8_template_export, websocket_phase8_template_import, websocket_phase8_simulate, websocket_phase8_versions, websocket_phase8_restore, websocket_phase9_discover, websocket_phase9_preview, websocket_phase9_prepare, websocket_phase9_activate, websocket_phase9_rollback, websocket_phase9_reference):
+    for handler in (websocket_recipient_list, websocket_recipient_save, websocket_recipient_delete, websocket_group_save, websocket_channel_save, websocket_channel_group_save, websocket_channel_group_delete, websocket_template_save, websocket_template_delete, websocket_routing_preview, websocket_rule_routing_save, websocket_delivery_enqueue, websocket_delivery_list, websocket_alarm_list, websocket_alarm_trigger, websocket_alarm_events, websocket_alarm_acknowledge, websocket_alarm_acknowledge_many, websocket_alarm_resolve, websocket_alarm_close, websocket_alarm_center_list, websocket_alarm_center_detail, websocket_alarm_category_list, websocket_alarm_category_save, websocket_alarm_category_deactivate, websocket_alarm_filter_list, websocket_alarm_filter_save, websocket_alarm_filter_delete, websocket_alarm_role_save, websocket_policy_list, websocket_policy_quiet_save, websocket_policy_pause_save, websocket_policy_pause_resume, websocket_policy_rate_limit_save, websocket_policy_dependency_save, websocket_policy_observation_save, websocket_policy_evaluate, websocket_phase8_template_list, websocket_phase8_template_save, websocket_phase8_template_delete, websocket_phase8_template_export, websocket_phase8_template_import, websocket_phase8_simulate, websocket_phase10_observe, websocket_phase8_versions, websocket_phase8_restore, websocket_phase9_discover, websocket_phase9_preview, websocket_phase9_prepare, websocket_phase9_activate, websocket_phase9_rollback, websocket_phase9_reference):
         websocket_api.async_register_command(hass, handler)
     hass.data[DOMAIN]["websocket_registered"] = True
 
@@ -790,6 +790,30 @@ async def websocket_phase8_simulate(hass: HomeAssistant, connection, msg: dict[s
         connection.send_result(msg["id"], result)
     except (KeyError, TypeError, ValueError):
         connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Simulationseingaben sind ungültig.")
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_storage_error(connection, msg, err)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/phase10/observe", probatio.Required("rule"): dict})
+@websocket_api.async_response
+async def websocket_phase10_observe(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """Preview a rule for the Phase-10 observation card without any writes."""
+    try:
+        now = datetime.now(UTC)
+        reasons = []
+        if msg.get("rule_id"):
+            reasons = await async_policy_preview(
+                _recipient_store(hass).repository,
+                rule_id=msg["rule_id"], priority=str(msg.get("priority", msg["rule"].get("priority", "normal"))),
+                now=now, alarm_state=str(msg.get("alarm_state", "active")),
+                category=msg.get("category"), entity_id=msg.get("entity_id"),
+            )
+        result = simulate_rule(msg["rule"], states=msg.get("states"), numeric_states=msg.get("numeric_states"), presence=msg.get("presence"), now=now, policy_reasons=reasons)
+        result.update({"observation_mode": True, "mode": "simulation", "action_guarantee": "Keine produktive Aktion", "delivery_started": False, "writes_performed": []})
+        connection.send_result(msg["id"], result)
+    except (KeyError, TypeError, ValueError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Beobachtungsdaten sind ungültig.")
     except (RuntimeError, sqlite3.Error) as err:
         _send_storage_error(connection, msg, err)
 

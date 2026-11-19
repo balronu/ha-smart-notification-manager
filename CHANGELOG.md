@@ -1,6 +1,11 @@
 # Changelog
 
-## Unveröffentlicht – Phase 9 in Entwicklung
+## Unveröffentlicht – Phase 10 in Entwicklung
+
+- Zweite responsive Lovelace-Karte für schreibfreie Simulation und Beobachtungsmodus mit expliziter Keine-Aktion-Garantie.
+- Unvollständige Zustandsdaten werden sicher als „Nicht sicher bestimmbar“ angezeigt.
+
+## Phase 9
 
 - Read-only-Erkennung von `notify.*`, `notify.send_message`, persistenten Benachrichtigungen, Mobile-App-Kanälen, TTS sowie verschachtelten `choose`-, `if`- und `repeat`-Sequenzen.
 - Deutsche Klassifizierung mit Risiken, fehlenden Entitäten, Kanälen, Positionen und begründetem Migrationsweg.
