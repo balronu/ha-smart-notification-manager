@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pytest
-
 from smart_notification_manager.core.repository import SQLiteRepository
 
 
@@ -52,4 +51,3 @@ def test_schema_contains_required_table_names(tmp_path: Path):
 
     names = asyncio.run(repository.async_run(tables))
     assert {"rules", "alarm_instances", "recipients", "channels", "delivery_attempts", "audit_log"} <= names
-
