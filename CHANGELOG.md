@@ -1,6 +1,6 @@
 # Changelog
 
-## Unveröffentlicht – Phase 5 in Entwicklung
+## Unveröffentlicht – Phase 5 abgeschlossen
 
 - Policy-Schicht für Ruhezeiten, Pausen, Rate-Limits, Regelabhängigkeiten und Beobachtungsmodus.
 - Schema-v6-Migration mit persistenter Entscheidungs- und Rate-Limit-Historie.
@@ -10,7 +10,9 @@
   Preview und Beobachtungsmodus verbrauchen kein Rate-Limit.
 - Server-seitige Abhängigkeitsprüfung und Regressionstests für Quiet Hours,
   Critical, Pausen, Retries und direkte WebSocket-Umgehungsversuche.
-- Phase 5 ist noch nicht in `main` integriert; kein Release und kein Tag.
+- PR #23 ist in `main` integriert; kein Release und kein Tag.
+- Automatische Delivery-Aufträge für Alarmwiederholungen und Eskalationen sind
+  noch offen und in Issue #24 als Beta-Vorbehalt festgehalten.
 
 ## Unveröffentlicht – Phase 4 abgeschlossen
 

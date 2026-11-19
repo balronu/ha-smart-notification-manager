@@ -1,6 +1,6 @@
-# Phase 5 – Benachrichtigungspolitiken
+# Phase 5 – Benachrichtigungspolitiken (abgeschlossen)
 
-Phase 5 entwickelt die Entscheidungsschicht vor dem Delivery-System. Sie
+Phase 5 implementiert die Entscheidungsschicht vor dem Delivery-System. Sie
 erzeugt selbst keine Versandaufträge und ruft keine Home-Assistant-Dienste
 auf.
 

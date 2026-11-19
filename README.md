@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Entwicklungsstatus:** Phase 5 von 12 ist auf einem Feature-Branch in Entwicklung. Ruhezeiten, Pausen, Rate-Limits, Abhängigkeiten und Beobachtungsmodus werden als Policy-Schicht vorbereitet; die Phase ist noch nicht abgenommen oder in `main` integriert. Die authentifizierte HA-Runtime-/Panel-E2E-Prüfung sowie Qualitäts-Gates #16–#19 bleiben Beta-Blocker.
+> **Entwicklungsstatus:** Phase 5 von 12 ist in `main` integriert. Die Policy-Schicht für Ruhezeiten, Pausen, Rate-Limits, Abhängigkeiten und Beobachtungsmodus ist abgeschlossen. Die automatische Zustellung von Alarmwiederholungen und Eskalationen ist noch offen ([Issue #24](https://github.com/balronu/ha-smart-notification-manager/issues/24)); die authentifizierte HA-Runtime-/Panel-E2E-Prüfung sowie Qualitäts-Gates #16–#19 bleiben Beta-Blocker.
 
 ## Ziel
 
@@ -70,13 +70,16 @@ geschützte WebSocket-Kommandos und eine responsive deutsche Oberfläche
 erreichbar. Eine vollständige HA-Runtime-/Panel-E2E-Prüfung sowie echte
 Versandaktionen sind weiterhin nicht freigegeben.
 
-## Phase-5-Zwischenstand
+## Phase-5-Ergebnis
 
 Die Policy-Schicht speichert Ruhezeiten mit Zeitzonen, zeitlich begrenzte
 Pausen, persistente Rate-Limits, Regelabhängigkeiten und Beobachtungsmodus.
 Entscheidungen werden vor Delivery nachvollziehbar protokolliert; der
-Beobachtungsmodus erzeugt keinen Versand. Phase 5 befindet sich noch in
-Entwicklung und ist nicht merge- oder releasefähig.
+Beobachtungsmodus erzeugt keinen Versand. Reguläre Delivery-Aufträge sind
+transaktional an die Policy-Prüfung gebunden. Wiederholungs- und
+Eskalationsereignisse werden im Alarm-Lifecycle verwaltet, erzeugen aber noch
+keine regulären Delivery-Aufträge; dies ist in [Issue #24](https://github.com/balronu/ha-smart-notification-manager/issues/24)
+als verbindlicher Beta-Vorbehalt dokumentiert.
 
 ## Entwicklung
 
@@ -99,4 +102,4 @@ Die Lizenzentscheidung ist weiterhin offen und wird vor einer öffentlichen Ver�
 
 ## English summary
 
-Smart Notification Manager is a German-first Home Assistant custom integration under development. Phase 3 is integrated on `main` and adds authenticated live configuration for recipients, channels, templates, routing and delivery status. Full HA runtime E2E, telephony and HACS publication remain gated.
+Smart Notification Manager is a German-first Home Assistant custom integration under development. Phase 5 is integrated on `main` and adds persistent notification policies before delivery. Alarm repeat/escalation delivery remains tracked in issue #24; full HA runtime E2E, telephony and HACS publication remain gated.
