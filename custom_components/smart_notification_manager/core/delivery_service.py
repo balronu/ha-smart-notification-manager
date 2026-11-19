@@ -7,13 +7,15 @@ from typing import Any
 
 from .adapters import ChannelAdapter, DeliveryAuthorizationError, DeliveryRequest, DeliveryResult
 from .delivery_store import DeliveryJob, DeliveryStore
+from .policies import PolicyStore
 
 
 class DeliveryService:
     """Run one technical delivery only after an explicit authorization flag."""
 
-    def __init__(self, store: DeliveryStore) -> None:
+    def __init__(self, store: DeliveryStore, policy_store: PolicyStore | None = None) -> None:
         self.store = store
+        self.policy_store = policy_store
 
     async def async_deliver(
         self,
@@ -29,7 +31,7 @@ class DeliveryService:
         if not authorized:
             raise DeliveryAuthorizationError("Explizite Versandbestätigung erforderlich")
         timestamp = now or datetime.now(UTC)
-        job = await self.store.async_enqueue(request, idempotency_key=idempotency_key, channel_id=channel_id, alarm_id=request.payload.get("alarm_id"))
+        job = await self.store.async_enqueue(request, idempotency_key=idempotency_key, channel_id=channel_id, alarm_id=request.payload.get("alarm_id"), policy_store=self.policy_store, policy_request=request.payload.get("policy_request"), now=timestamp)
         if job.state in {"accepted", "delivered", "simulated", "failed"}:
             return job
         claimed = await self.store.async_claim_due(now=timestamp, attempt_id=job.attempt_id)

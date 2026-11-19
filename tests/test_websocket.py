@@ -23,6 +23,7 @@ from smart_notification_manager.websocket import (
     websocket_alarm_trigger,
     websocket_channel_group_save,
     websocket_channel_save,
+    websocket_delivery_enqueue,
     websocket_policy_evaluate,
     websocket_policy_list,
     websocket_policy_quiet_save,
@@ -205,3 +206,15 @@ async def test_phase5_policy_websocket_round_trip_has_no_delivery_side_effect(tm
     await implementation(websocket_policy_list)(hass, connection, {"id": 32})
     assert connection.results[-1][1]["quiet_hours"][0]["quiet_id"] == "night"
     assert await repository.async_run(lambda c: c.execute("SELECT COUNT(*) FROM delivery_attempts").fetchone()[0]) == 0
+
+
+@pytest.mark.asyncio
+async def test_direct_websocket_enqueue_cannot_bypass_policy(tmp_path):
+    repository = SQLiteRepository(tmp_path / "manager.sqlite3")
+    from smart_notification_manager.core.delivery_store import DeliveryStore
+    from smart_notification_manager.core.policies import PolicyStore
+
+    hass = SimpleNamespace(data={DOMAIN: {"recipient_store": RecipientStore(repository), "delivery_store": DeliveryStore(repository), "policy_store": PolicyStore(repository)}})
+    connection = Connection()
+    await implementation(websocket_delivery_enqueue)(hass, connection, {"id": 33, "request": {"attempt_id": "attempt", "recipient_id": "michael", "message": "x"}, "channel_id": "mobile", "idempotency_key": "direct"})
+    assert connection.errors[-1][0:2] == (33, "invalid_format")

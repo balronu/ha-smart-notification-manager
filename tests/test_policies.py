@@ -75,6 +75,8 @@ async def test_dependencies_reject_cycles_unknown_state_and_observation_has_no_d
         await store.async_save_dependency(RuleDependency(second.rule_id, first.rule_id, "active"), user_id="owner", now=now)
     blocked = await store.async_decide({"rule_id": first.rule_id, "alarm_state": "active", "rule_enabled": True, "dependency_states": {}}, now=now)
     assert blocked.reason_code == "dependency_not_met"
+    spoofed = await store.async_decide({"rule_id": first.rule_id, "alarm_state": "active", "rule_enabled": True, "dependency_states": {second.rule_id: "active"}}, now=now)
+    assert spoofed.reason_code == "dependency_not_met"
     await store.async_save_observation(first.rule_id, enabled=True, critical_confirmed=False, user_id="owner", now=now)
     observed = await store.async_decide({"rule_id": first.rule_id, "alarm_state": "active", "rule_enabled": True}, now=now)
     assert observed.action == "observe"

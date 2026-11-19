@@ -6,6 +6,10 @@
 - Schema-v6-Migration mit persistenter Entscheidungs- und Rate-Limit-Historie.
 - Admin-geschützte Policy-WebSocket-Verträge und deutsche Panel-Anzeige.
 - Keine Versandaufträge oder externen HA-Serviceaufrufe aus der Policy-Auswertung.
+- Reguläre Delivery-Aufträge sind transaktional an die Policy-Auswertung gebunden;
+  Preview und Beobachtungsmodus verbrauchen kein Rate-Limit.
+- Server-seitige Abhängigkeitsprüfung und Regressionstests für Quiet Hours,
+  Critical, Pausen, Retries und direkte WebSocket-Umgehungsversuche.
 - Phase 5 ist noch nicht in `main` integriert; kein Release und kein Tag.
 
 ## Unveröffentlicht – Phase 4 abgeschlossen

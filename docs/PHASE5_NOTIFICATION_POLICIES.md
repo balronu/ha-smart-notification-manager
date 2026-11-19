@@ -31,6 +31,17 @@ Pausen werden mit Ablaufzeitpunkt gespeichert und überstehen Neustarts. Die
 Rate-Limit-Zählung ist von technischen Delivery-Retries und Alarmwiederholungen
 getrennt.
 
+Bei regulären Alarmversandaufträgen werden Policy-Entscheidung, Rate-Limit-
+Reservierung und Auftragserstellung in einer Repository-Transaktion ausgeführt.
+Preview, Beobachtungsmodus und unterdrückte Entscheidungen verbrauchen kein
+Kontingent. Eine fehlgeschlagene Übergabe gibt die Reservierung nicht zurück;
+technische Retries verwenden denselben Auftrag und erhöhen das Rate-Limit nicht
+erneut. Eine Anbieterannahme ist weiterhin keine bestätigte Zustellung.
+
+Die Regelabhängigkeit wird serverseitig anhand aktiver, aus der Datenbank
+stammender Alarmvorgänge bewertet. Clientseitig übermittelte
+`dependency_states` werden nicht als Autorität verwendet.
+
 ## WebSocket und UI
 
 Die Admin-geschützten Verträge liegen unter `smart_notification_manager/policy/*`.
@@ -44,3 +55,17 @@ Die lokalen Tests verwenden isolierte SQLite-/HA-Fixtures und simulierte
 Versandadapter. Die echte authentifizierte HA-HTTP-/WebSocket-/Panel-E2E bleibt
 Beta-Gate #16. Hassfest (#17), HACS (#18) und Secret-Scan (#19) bleiben vor
 `v1.0.0-beta.1` verpflichtend. VM104 wird nicht verwendet.
+
+Der admin-geschützte WebSocket-Testpfad darf nur mit `administrative_test=true`
+und `test_only=true` verwendet werden. Er persistiert ausschließlich einen
+Testauftrag und ruft keinen Adapter beziehungsweise keinen HA-Dienst auf.
+Reguläre Aufträge benötigen eine bestehende Alarm-ID und werden immer durch die
+Policy-Grenze geführt.
+
+Die Phase-4-Methoden für fällige Alarmwiederholungen und Eskalationsstufen
+ändern ausschließlich den persistenten Alarmzustand und erzeugen selbst keine
+Delivery-Aufträge. Dadurch gibt es dort keinen versteckten Versandweg; sobald
+ein Auftrag über den Delivery-Service oder den WebSocket-Enqueue-Vertrag
+entsteht, gilt dieselbe Policy-Grenze. Das explizite Auslösen eines Alarms und
+die reine Routing-Vorschau sind administrative, serverseitig geschützte
+Test-/Konfigurationsaktionen und führen keinen externen Versand aus.

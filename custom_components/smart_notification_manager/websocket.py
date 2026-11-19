@@ -15,7 +15,7 @@ from homeassistant.core import HomeAssistant
 from .const import DOMAIN
 from .core.adapters import DeliveryRequest
 from .core.alarm_lifecycle import AlarmLifecycleStore, AlarmPolicy, alarm_to_dict
-from .core.delivery_store import DeliveryStore
+from .core.delivery_store import DeliveryStore, PolicySuppressedError
 from .core.entity_catalog import list_entity_snapshots
 from .core.policies import Pause, PolicyStore, QuietHours, RateLimitPolicy, RuleDependency
 from .core.recipient_store import RecipientStore
@@ -283,7 +283,7 @@ async def websocket_rule_routing_save(hass: HomeAssistant, connection, msg: dict
 @websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/delivery/enqueue", probatio.Required("request"): dict, probatio.Required("channel_id"): str, probatio.Required("idempotency_key"): str})
 @websocket_api.async_response
 async def websocket_delivery_enqueue(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
-    """Persist a pending job; enqueueing alone never invokes an HA service."""
+    """Persist a job only after policy evaluation; this never invokes an HA service."""
 
     try:
         value = msg["request"]
@@ -294,10 +294,24 @@ async def websocket_delivery_enqueue(hass: HomeAssistant, connection, msg: dict[
             message=value["message"],
             payload=dict(value.get("payload", {})),
         )
-        job = await DeliveryStore(_recipient_store(hass).repository).async_enqueue(
-            request, idempotency_key=msg["idempotency_key"], channel_id=msg["channel_id"], alarm_id=value.get("alarm_id")
+        policy_store = _policy_store(hass)
+        policy_request = None
+        if value.get("administrative_test") is True:
+            # Explicit admin-only persist-only test action. It creates no real
+            # service call and is intentionally excluded from alarm policy.
+            if value.get("test_only") is not True:
+                raise PermissionError("Administrativer Testversand muss ausdrücklich als test_only markiert sein")
+            policy_store = None
+        else:
+            policy_request = await _server_policy_request(hass, value.get("alarm_id"))
+        job = await _delivery_store(hass).async_enqueue(
+            request, idempotency_key=msg["idempotency_key"], channel_id=msg["channel_id"], alarm_id=value.get("alarm_id"), policy_store=policy_store, policy_request=policy_request
         )
         connection.send_result(msg["id"], {"job": _job_to_dict(job)})
+    except PolicySuppressedError as err:
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, f"Versand unterdrückt: {err.decision.reason_de}")
+    except PermissionError as err:
+        connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, str(err))
     except (KeyError, TypeError, ValueError):
         connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Der Versandauftrag ist ungültig.")
     except (RuntimeError, sqlite3.Error) as err:
@@ -547,6 +561,36 @@ def _store(hass: HomeAssistant) -> RuleStore:
     if store is None:
         raise RuntimeError("Smart Notification Manager is not configured")
     return store
+
+
+def _delivery_store(hass: HomeAssistant) -> DeliveryStore:
+    runtime = hass.data.get(DOMAIN, {})
+    store = runtime.get("delivery_store")
+    if store is None:
+        store = DeliveryStore(_recipient_store(hass).repository)
+    return store
+
+
+async def _server_policy_request(hass: HomeAssistant, alarm_id: str | None) -> dict[str, Any]:
+    if not alarm_id:
+        raise ValueError("Regulärer Versand benötigt eine bestehende Alarm-ID")
+    row = await _delivery_store(hass).repository.async_run(
+        lambda connection: connection.execute(
+            "SELECT a.alarm_id,a.rule_id,a.alarm_state,a.entity_id,a.priority,r.enabled,r.category FROM alarm_instances AS a LEFT JOIN rules AS r ON r.rule_id=a.rule_id WHERE a.alarm_id=?",
+            (alarm_id,),
+        ).fetchone()
+    )
+    if row is None:
+        raise ValueError("Alarm für den Versand nicht gefunden")
+    return {
+        "alarm_id": row["alarm_id"],
+        "rule_id": row["rule_id"],
+        "alarm_state": row["alarm_state"],
+        "entity_id": row["entity_id"],
+        "priority": row["priority"],
+        "rule_enabled": bool(row["enabled"]) if row["enabled"] is not None else False,
+        "category": row["category"],
+    }
 
 
 def _recipient_store(hass: HomeAssistant) -> RecipientStore:
