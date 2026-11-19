@@ -28,7 +28,7 @@ from .websocket import async_register as async_register_websocket
 
 FRONTEND_URL_BASE = "/smart_notification_manager_static"
 FRONTEND_PATH = Path(__file__).parent / "frontend"
-CONFIG_SCHEMA = cv.empty_config_schema
+CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:

@@ -17,6 +17,7 @@ from smart_notification_manager.core.rules import (
 )
 from smart_notification_manager.websocket import (
     websocket_alarm_acknowledge,
+    websocket_alarm_center_list,
     websocket_alarm_events,
     websocket_alarm_list,
     websocket_alarm_resolve,
@@ -49,6 +50,21 @@ class Connection:
 
     def send_error(self, message_id, code, message):
         self.errors.append((message_id, code, message))
+
+
+def test_alarm_center_list_schema_accepts_frontend_pagination_payload():
+    payload = websocket_alarm_center_list._ws_schema(
+        {
+            "id": 1,
+            "type": "smart_notification_manager/alarm_center/list",
+            "filters": {},
+            "page": 1,
+            "page_size": 25,
+            "sort": "newest",
+            "group_by": None,
+        }
+    )
+    assert payload["page_size"] == 25
 
 
 def base_rule():
