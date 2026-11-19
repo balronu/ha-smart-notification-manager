@@ -12,10 +12,10 @@
 | 8 | Vorlagen, Regel-Assistent, Simulation und Regelversionierung | abgeschlossen: in `main` integriert, 97 Tests und Main-CI grün |
 | 9 | Sicherer Migrationsassistent für bestehende HA-Automationen | Read-only Analyse, Hybridvorschau, externe Referenzen, Rollback-Schutz und 25 Regressionen |
 | 10 | zweite Lovelace-Karte, schreibfreie Simulation, Beobachtungsmodus | keine-Aktion-Garantie mit Desktop-/iPad-/iPhone-Fixture |
-| 11 | geführte Migration, Hybridbetrieb, Backup/Rollback | Pilot ohne Sicherheitsquellen |
+| 11 | geführte Migration, Hybridbetrieb, Import/Export, Backup/Rollback und Neustart-Wiederherstellung | isolierte Abnahme ohne Sicherheitsquellen |
 | 12 | HACS-/CI-/Release-Readiness und vollständige Integration | alle Gates, keine offenen Pflichttests |
 
-Phase 1 bis Phase 9 sind abgeschlossen und in `main` integriert. Phase 10 wird
+Phase 1 bis Phase 10 sind abgeschlossen und in `main` integriert. Phase 11 wird
 auf einem separaten Feature-Branch entwickelt und nicht automatisch gemergt. Die
 automatische Zustellung von Alarmwiederholungen und Eskalationen ist als
 verbindlicher Beta-Vorbehalt in Issue #24 offen. Die vollständige
