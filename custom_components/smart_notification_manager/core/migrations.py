@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 
-CURRENT_SCHEMA_VERSION = 7
+CURRENT_SCHEMA_VERSION = 8
 
 
 def apply_migrations(connection: sqlite3.Connection) -> None:
@@ -40,6 +40,8 @@ def apply_migrations(connection: sqlite3.Connection) -> None:
                 _migration_v6(connection)
             elif next_version == 7:
                 _migration_v7(connection)
+            elif next_version == 8:
+                _migration_v8(connection)
             else:  # pragma: no cover - guarded by CURRENT_SCHEMA_VERSION
                 raise RuntimeError(f"missing migration {next_version}")
             connection.execute(f"PRAGMA user_version = {next_version}")
@@ -410,6 +412,29 @@ def _migration_v7(connection: sqlite3.Connection) -> None:
             updated_by TEXT NOT NULL,
             updated_at TEXT NOT NULL
         );
+        """,
+    )
+
+
+def _migration_v8(connection: sqlite3.Connection) -> None:
+    """Add Phase-8 user-defined rule templates without changing rules."""
+
+    _execute_sql_statements(
+        connection,
+        """
+        CREATE TABLE IF NOT EXISTS rule_templates (
+            template_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            category TEXT NOT NULL,
+            priority TEXT NOT NULL CHECK (priority IN ('info','normal','warning','critical')),
+            definition_json TEXT NOT NULL,
+            version INTEGER NOT NULL DEFAULT 1,
+            created_by TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(created_by, name)
+        );
+        CREATE INDEX IF NOT EXISTS ix_rule_templates_name ON rule_templates(name COLLATE NOCASE);
         """,
     )
 

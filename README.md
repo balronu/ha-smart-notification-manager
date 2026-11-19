@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Entwicklungsstatus:** Phase 7 ist in `main` integriert. Die eigenständige Lovelace-Karte, native HA-Entitäten und dynamische Regel-Switch-Synchronisierung sind abgeschlossen. Issue #24, die authentifizierte HA-Runtime-/Panel-E2E-Prüfung und Qualitäts-Gates #16–#19 bleiben vor der Beta offen.
+> **Entwicklungsstatus:** Phase 8 befindet sich in Entwicklung. Vorlagenbibliothek, Regel-Assistent, Simulation und Versionshistorie werden auf dem Phase-1–7-Fundament ergänzt. Issue #24, die authentifizierte HA-Runtime-/Panel-E2E-Prüfung und Qualitäts-Gates #16–#19 bleiben vor der Beta offen.
 
 ## Ziel
 
@@ -31,6 +31,7 @@ Die Datenbank wird nicht automatisch in einer produktiven HA-Instanz angelegt. D
 - [Phase 5 – Benachrichtigungspolitiken](docs/PHASE5_NOTIFICATION_POLICIES.md)
 - [Phase 6 – Alarmzentrale](docs/PHASE6_ALARM_CENTER.md)
 - [Phase 7 – Lovelace-Alarmkarte](docs/PHASE7_LOVELACE_CARD.md)
+- [Phase 8 – Vorlagen, Assistent und Simulation](docs/PHASE8_RULE_WIZARD_TEMPLATES.md)
 
 ## Phase-2-Ergebnis
 
@@ -84,6 +85,14 @@ keine regulären Delivery-Aufträge; dies ist in [Issue #24](https://github.com/
 als verbindlicher Beta-Vorbehalt dokumentiert.
 
 ## Entwicklung
+
+### Phase 8 – in Entwicklung
+
+Die Phase ergänzt 14 entity-agnostische Regelvorlagen, einen deutschen
+zehnstufigen Assistenten, sichere JSON-Import-/Export-Vorschauen,
+serverseitige Simulation ohne Zustellung sowie Versionsvergleich und
+Wiederherstellung als neue Regelversion. Die vollständige HA-Runtime-/Panel-
+E2E bleibt Beta-Gate #16; reale Testversandaktionen sind nicht aktiviert.
 
 ### Phase 7 – abgeschlossen
 

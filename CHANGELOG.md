@@ -1,5 +1,13 @@
 # Changelog
 
+## Unveröffentlicht – Phase 8 in Entwicklung
+
+- 14 deutsche, entity-agnostische Regelvorlagen mit sicherem JSON-Import/Export.
+- Zehnstufiger Regel-Assistent mit bestehendem RuleStore- und Routing-Vertrag.
+- Server-seitige Simulation ohne Alarm-, Delivery-, Rate-Limit- oder Auditänderung.
+- Versionshistorie mit optimistischer Prüfung und Restore als neue Version.
+- Keine echten Nachrichten, Anrufe, TTS-Ausgaben, Releases oder Tags.
+
 ## Unveröffentlicht – Phase 7 abgeschlossen
 
 - PR #28 in `main` integriert; Lovelace-Karte, deutscher Editor und native HA-Entitäten sind verfügbar.

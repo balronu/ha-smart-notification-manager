@@ -20,6 +20,7 @@ from .core.policies import PolicyStore
 from .core.recipient_store import RecipientStore
 from .core.repository import SQLiteRepository
 from .core.rule_store import RuleStore
+from .core.rule_templates import RuleTemplateStore
 from .websocket import async_register as async_register_websocket
 
 FRONTEND_URL_BASE = "/smart_notification_manager_static"
@@ -46,6 +47,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     repository = SQLiteRepository(database_path)
     runtime["repository"] = repository
     runtime["rule_store"] = RuleStore(repository)
+    runtime["rule_template_store"] = RuleTemplateStore(repository)
     runtime["recipient_store"] = RecipientStore(repository)
     runtime["delivery_store"] = DeliveryStore(repository)
     runtime["alarm_store"] = AlarmLifecycleStore(repository)
@@ -74,6 +76,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         frontend.add_extra_js_url(hass, f"{FRONTEND_URL_BASE}/smart-notification-manager.js?v=2")
         frontend.add_extra_js_url(hass, f"{FRONTEND_URL_BASE}/smart-notification-manager-card.js?v=1")
+        frontend.add_extra_js_url(hass, f"{FRONTEND_URL_BASE}/phase-8-rule-wizard.js?v=1")
         runtime["frontend_registered"] = True
     return True
 
@@ -86,6 +89,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await hass.config_entries.async_unload_platforms(entry, ["sensor", "binary_sensor", "switch"])
     runtime.get("entries", {}).pop(entry.entry_id, None)
     runtime.pop("rule_store", None)
+    runtime.pop("rule_template_store", None)
     runtime.pop("recipient_store", None)
     runtime.pop("delivery_store", None)
     runtime.pop("delivery_service", None)

@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from typing import Any
 
 from .models import ensure_aware, new_id
 from .permissions import Permission, can_access
+from .policies import _has_dependency_cycle
 from .repository import SQLiteRepository
 from .rules import (
     Comparison,
@@ -151,10 +152,63 @@ class RuleStore:
         )
         return await self.async_save(duplicate, access)
 
+    async def async_list_versions(self, rule_id: str, *, limit: int = 20) -> list[dict[str, Any]]:
+        """Return the newest bounded version history without mutating it."""
+
+        bounded = min(100, max(1, int(limit)))
+        return await self.repository.async_run(lambda c: [
+            {"version": row[0], "definition": json.loads(row[1]), "created_at": row[2]}
+            for row in c.execute(
+                "SELECT version,definition_json,created_at FROM rule_versions WHERE rule_id=? ORDER BY version DESC LIMIT ?",
+                (rule_id, bounded),
+            )
+        ])
+
+    async def async_restore(self, rule_id: str, version: int, access: EditorAccess, *, now: datetime, expected_version: int | None = None, available_entities: set[str] | None = None, reason: str = "", critical_confirmed: bool = False) -> RuleDefinition:
+        """Restore a historical version as a new optimistic version."""
+
+        _require(access, Permission.ADMIN)
+        ensure_aware(now)
+
+        def operation(connection):
+            current = connection.execute("SELECT MAX(version) FROM rule_versions WHERE rule_id=?", (rule_id,)).fetchone()[0]
+            if expected_version is not None and int(current or 0) != expected_version:
+                raise ValueError(f"rule version conflict: expected {expected_version}, received {current or 0}")
+            source = connection.execute("SELECT definition_json FROM rule_versions WHERE rule_id=? AND version=?", (rule_id, version)).fetchone()
+            if source is None:
+                raise ValueError("historische Regelversion nicht gefunden")
+            restored = _rule_from_dict(json.loads(source[0]))
+            if restored.priority is Priority.CRITICAL and not critical_confirmed:
+                raise PermissionError("Wiederherstellung einer Critical-Regel benötigt eine Bestätigung")
+            if available_entities is not None:
+                referenced = {entity_id for trigger in restored.triggers for entity_id in trigger.entity_ids}
+                referenced.update(child.value["entity_id"] for child in _condition_nodes(restored.conditions) if isinstance(child.value, dict) and child.value.get("entity_id"))
+                missing = referenced - available_entities
+                if missing:
+                    raise ValueError("Wiederherstellung benötigt nicht verfügbare Entitäten")
+            if _has_dependency_cycle(connection, rule_id):
+                raise ValueError("Zirkuläre Regelabhängigkeit ist nicht zulässig")
+            next_version = int(current or 0) + 1
+            restored = replace(restored, version=next_version, updated_at=now)
+            validate_rule(restored)
+            payload = json.dumps(_rule_to_dict(restored), ensure_ascii=False, sort_keys=True)
+            connection.execute("UPDATE rules SET name=?,category=?,enabled=?,updated_at=?,description=?,area_id=?,area_name=?,priority=?,deleted_at=NULL WHERE rule_id=?", (restored.name, restored.category, int(restored.enabled), now.isoformat(), restored.description, restored.area_id, restored.area_name, restored.priority.value, rule_id))
+            connection.execute("INSERT INTO rule_versions(rule_version_id,rule_id,version,definition_json,created_at) VALUES (?,?,?,?,?)", (new_id(), rule_id, next_version, payload, now.isoformat()))
+            connection.execute("INSERT INTO audit_log(audit_id,user_id,action,object_type,object_id,details_json,occurred_at) VALUES (?,?,?,?,?,?,?)", (new_id(), access.user_id, "rule_restored", "rule", rule_id, json.dumps({"from_version": version, "reason": reason}, ensure_ascii=False), now.isoformat()))
+            return restored
+
+        return await self.repository.async_run(operation)
+
 
 def _require(access: EditorAccess, permission: Permission) -> None:
     if not access.user_id or not can_access(set(access.granted), permission):
         raise PermissionError("authenticated editor permission required")
+
+
+def _condition_nodes(node):
+    yield node
+    for child in node.children:
+        yield from _condition_nodes(child)
 
 
 def _rule_to_dict(rule: RuleDefinition) -> dict[str, Any]:

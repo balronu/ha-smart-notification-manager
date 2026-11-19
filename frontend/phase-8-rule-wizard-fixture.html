@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Phase 8 Fixture</title></head>
+<body>
+  <smart-notification-phase8-manager></smart-notification-phase8-manager>
+  <script src="phase-8-rule-wizard.js"></script>
+  <script>
+    const component = document.querySelector("smart-notification-phase8-manager");
+    component.hass = { callWS: async (message) => {
+      if (message.type.endsWith("template/list")) return { templates: [{ template_id: "fixture", name: "Tür oder Fenster länger geöffnet", category: "Sicherheit", priority: "warning", definition: { trigger: { entity_ids: ["<entity>"] }, conditions: { children: [{ value: { state: "on" } }] } } }] };
+      if (message.type.endsWith("simulate")) return { would_trigger: true, would_send: false, delivery_reason: "Ruhezeit ist aktiv." };
+      return {};
+    } };
+    component.data = { templates: [{ template_id: "fixture", name: "Tür oder Fenster länger geöffnet", category: "Sicherheit", priority: "warning", definition: { trigger: { entity_ids: ["<entity>"] }, conditions: { children: [{ value: { state: "on" } }] } } }] };
+    document.documentElement.dataset.rendered = "passed";
+  </script>
+</body>
+</html>

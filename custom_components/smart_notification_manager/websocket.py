@@ -25,6 +25,8 @@ from .core.recipient_store import RecipientStore
 from .core.recipients import Recipient, RecipientDevice, RecipientGroup
 from .core.revalidation import revalidate_alarm
 from .core.rule_store import EditorAccess, RuleStore, rule_from_editor_payload, rule_to_dict
+from .core.rule_templates import RuleTemplateStore
+from .core.simulation import async_policy_preview, simulate_rule
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,7 +69,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, websocket_save)
     websocket_api.async_register_command(hass, websocket_delete)
     websocket_api.async_register_command(hass, websocket_duplicate)
-    for handler in (websocket_recipient_list, websocket_recipient_save, websocket_recipient_delete, websocket_group_save, websocket_channel_save, websocket_channel_group_save, websocket_channel_group_delete, websocket_template_save, websocket_template_delete, websocket_routing_preview, websocket_rule_routing_save, websocket_delivery_enqueue, websocket_delivery_list, websocket_alarm_list, websocket_alarm_trigger, websocket_alarm_events, websocket_alarm_acknowledge, websocket_alarm_acknowledge_many, websocket_alarm_resolve, websocket_alarm_close, websocket_alarm_center_list, websocket_alarm_center_detail, websocket_alarm_category_list, websocket_alarm_category_save, websocket_alarm_category_deactivate, websocket_alarm_filter_list, websocket_alarm_filter_save, websocket_alarm_filter_delete, websocket_alarm_role_save, websocket_policy_list, websocket_policy_quiet_save, websocket_policy_pause_save, websocket_policy_pause_resume, websocket_policy_rate_limit_save, websocket_policy_dependency_save, websocket_policy_observation_save, websocket_policy_evaluate):
+    for handler in (websocket_recipient_list, websocket_recipient_save, websocket_recipient_delete, websocket_group_save, websocket_channel_save, websocket_channel_group_save, websocket_channel_group_delete, websocket_template_save, websocket_template_delete, websocket_routing_preview, websocket_rule_routing_save, websocket_delivery_enqueue, websocket_delivery_list, websocket_alarm_list, websocket_alarm_trigger, websocket_alarm_events, websocket_alarm_acknowledge, websocket_alarm_acknowledge_many, websocket_alarm_resolve, websocket_alarm_close, websocket_alarm_center_list, websocket_alarm_center_detail, websocket_alarm_category_list, websocket_alarm_category_save, websocket_alarm_category_deactivate, websocket_alarm_filter_list, websocket_alarm_filter_save, websocket_alarm_filter_delete, websocket_alarm_role_save, websocket_policy_list, websocket_policy_quiet_save, websocket_policy_pause_save, websocket_policy_pause_resume, websocket_policy_rate_limit_save, websocket_policy_dependency_save, websocket_policy_observation_save, websocket_policy_evaluate, websocket_phase8_template_list, websocket_phase8_template_save, websocket_phase8_template_delete, websocket_phase8_template_export, websocket_phase8_template_import, websocket_phase8_simulate, websocket_phase8_versions, websocket_phase8_restore):
         websocket_api.async_register_command(hass, handler)
     hass.data[DOMAIN]["websocket_registered"] = True
 
@@ -701,12 +703,155 @@ async def websocket_policy_evaluate(hass: HomeAssistant, connection, msg: dict[s
         connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Policy-Entscheidung ist ungültig.")
 
 
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/phase8/template/list"})
+@websocket_api.async_response
+async def websocket_phase8_template_list(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        connection.send_result(msg["id"], {"templates": await _template_store(hass).async_list()})
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_storage_error(connection, msg, err)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/phase8/template/save", probatio.Required("template"): dict})
+@websocket_api.async_response
+async def websocket_phase8_template_save(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        saved = await _template_store(hass).async_save(msg["template"], user_id=_user_id(connection), now=datetime.now(UTC))
+        connection.send_result(msg["id"], {"template": saved})
+    except (KeyError, TypeError, ValueError, PermissionError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Regelvorlage ist ungültig.")
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_storage_error(connection, msg, err)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/phase8/template/delete", probatio.Required("template_id"): str})
+@websocket_api.async_response
+async def websocket_phase8_template_delete(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        await _template_store(hass).async_delete(msg["template_id"], user_id=_user_id(connection))
+        connection.send_result(msg["id"], {})
+    except (KeyError, TypeError, ValueError, PermissionError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Regelvorlage kann nicht gelöscht werden.")
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_storage_error(connection, msg, err)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/phase8/template/export", probatio.Required("template_id"): str})
+@websocket_api.async_response
+async def websocket_phase8_template_export(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        connection.send_result(msg["id"], await _template_store(hass).async_export(msg["template_id"]))
+    except (KeyError, TypeError, ValueError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Regelvorlage wurde nicht gefunden.")
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/phase8/template/import", probatio.Required("payload"): dict, probatio.Required("confirm"): bool})
+@websocket_api.async_response
+async def websocket_phase8_template_import(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        result = await _template_store(hass).async_import(msg["payload"], user_id=_user_id(connection), now=datetime.now(UTC), confirm=msg["confirm"])
+        connection.send_result(msg["id"], result)
+    except (KeyError, TypeError, ValueError, PermissionError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Der Import ist ungültig oder kollidiert mit einer bestehenden Vorlage.")
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_storage_error(connection, msg, err)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/phase8/simulate", probatio.Required("rule"): dict})
+@websocket_api.async_response
+async def websocket_phase8_simulate(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        policy_reasons = []
+        if msg.get("rule_id"):
+            policy_reasons = await async_policy_preview(
+                _recipient_store(hass).repository,
+                rule_id=msg["rule_id"],
+                priority=str(msg.get("priority", msg["rule"].get("priority", "normal"))),
+                now=datetime.now(UTC),
+                alarm_state=str(msg.get("alarm_state", "active")),
+                category=msg.get("category"),
+                entity_id=msg.get("entity_id"),
+            )
+        result = simulate_rule(
+            msg["rule"],
+            states=msg.get("states"),
+            numeric_states=msg.get("numeric_states"),
+            presence=msg.get("presence"),
+            now=datetime.now(UTC),
+            policy_reasons=policy_reasons,
+        )
+        connection.send_result(msg["id"], result)
+    except (KeyError, TypeError, ValueError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Simulationseingaben sind ungültig.")
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_storage_error(connection, msg, err)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/phase8/versions", probatio.Required("rule_id"): str})
+@websocket_api.async_response
+async def websocket_phase8_versions(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        versions = await _store(hass).async_list_versions(msg["rule_id"], limit=int(msg.get("limit", 20)))
+        connection.send_result(msg["id"], {"versions": versions})
+    except (KeyError, TypeError, ValueError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Versionshistorie ist ungültig.")
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_storage_error(connection, msg, err)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/phase8/restore", probatio.Required("rule_id"): str, probatio.Required("version"): int, probatio.Required("expected_version"): int})
+@websocket_api.async_response
+async def websocket_phase8_restore(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        restored = await _store(hass).async_restore(
+            msg["rule_id"],
+            version=msg["version"],
+            access=EditorAccess(_user_id(connection), frozenset({"admin"})),
+            now=datetime.now(UTC),
+            expected_version=msg["expected_version"],
+            available_entities=_available_entity_ids(hass),
+            reason=str(msg.get("reason", "")),
+            critical_confirmed=bool(msg.get("critical_confirmed", False)),
+        )
+        connection.send_result(msg["id"], {"rule": rule_to_dict(restored)})
+        _notify_rule_update(hass, restored.rule_id)
+    except (KeyError, TypeError, ValueError, PermissionError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Wiederherstellung ist ungültig oder nicht bestätigt.")
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_storage_error(connection, msg, err)
+
+
 def _store(hass: HomeAssistant) -> RuleStore:
     runtime = hass.data.get(DOMAIN, {})
     store = runtime.get("rule_store")
     if store is None:
         raise RuntimeError("Smart Notification Manager is not configured")
     return store
+
+
+def _template_store(hass: HomeAssistant) -> RuleTemplateStore:
+    store = hass.data.get(DOMAIN, {}).get("rule_template_store")
+    if store is None:
+        raise RuntimeError("Smart Notification Manager is not configured")
+    return store
+
+
+def _available_entity_ids(hass: HomeAssistant) -> set[str] | None:
+    states = getattr(hass, "states", None)
+    if states is None:
+        return None
+    async_all = getattr(states, "async_all", None)
+    if callable(async_all):
+        return {state.entity_id for state in async_all()}
+    return None
 
 
 def _delivery_store(hass: HomeAssistant) -> DeliveryStore:
