@@ -1,6 +1,8 @@
+import sqlite3
 from pathlib import Path
 
 import pytest
+from smart_notification_manager.core import migrations
 from smart_notification_manager.core.repository import SQLiteRepository
 
 
@@ -51,3 +53,32 @@ def test_schema_contains_required_table_names(tmp_path: Path):
 
     names = asyncio.run(repository.async_run(tables))
     assert {"rules", "alarm_instances", "recipients", "channels", "delivery_attempts", "audit_log"} <= names
+
+
+def test_failed_migration_rolls_back_and_can_resume(tmp_path: Path, monkeypatch):
+    database = tmp_path / "migration.sqlite3"
+    connection = sqlite3.connect(database)
+    original_migration = migrations._migration_v1
+
+    def faulty_migration(connection):
+        connection.execute("CREATE TABLE partial_schema (value TEXT)")
+        raise RuntimeError("deliberate migration failure")
+
+    monkeypatch.setattr(migrations, "_migration_v1", faulty_migration)
+    with pytest.raises(RuntimeError, match="deliberate migration failure"):
+        migrations.apply_migrations(connection)
+
+    assert connection.execute("PRAGMA user_version").fetchone()[0] == 0
+    assert connection.execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'partial_schema'"
+    ).fetchone() is None
+
+    monkeypatch.setattr(migrations, "_migration_v1", original_migration)
+    connection.close()
+    connection = sqlite3.connect(database)
+    migrations.apply_migrations(connection)
+    assert connection.execute("PRAGMA user_version").fetchone()[0] == 1
+    assert connection.execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'rules'"
+    ).fetchone() is not None
+    connection.close()

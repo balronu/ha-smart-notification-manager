@@ -8,7 +8,13 @@ CURRENT_SCHEMA_VERSION = 1
 
 
 def apply_migrations(connection: sqlite3.Connection) -> None:
-    """Apply additive migrations in one transaction."""
+    """Apply additive migrations atomically.
+
+    ``sqlite3.Connection.executescript`` implicitly commits before running a
+    script.  Migration statements are therefore executed one at a time inside
+    an explicit transaction so a failed migration cannot leave a partial
+    schema behind.
+    """
 
     connection.execute("PRAGMA foreign_keys = ON")
     connection.execute("PRAGMA journal_mode = WAL")
@@ -17,12 +23,19 @@ def apply_migrations(connection: sqlite3.Connection) -> None:
     if version > CURRENT_SCHEMA_VERSION:
         raise RuntimeError("database schema is newer than this integration")
     if version == 0:
-        _migration_v1(connection)
-        connection.execute(f"PRAGMA user_version = {CURRENT_SCHEMA_VERSION}")
+        try:
+            connection.execute("BEGIN")
+            _migration_v1(connection)
+            connection.execute(f"PRAGMA user_version = {CURRENT_SCHEMA_VERSION}")
+            connection.commit()
+        except BaseException:
+            connection.rollback()
+            raise
 
 
 def _migration_v1(connection: sqlite3.Connection) -> None:
-    connection.executescript(
+    _execute_sql_statements(
+        connection,
         """
         CREATE TABLE IF NOT EXISTS rules (
             rule_id TEXT PRIMARY KEY,
@@ -164,6 +177,21 @@ def _migration_v1(connection: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS ix_alarm_events_alarm_time ON alarm_events(alarm_id, occurred_at);
         CREATE INDEX IF NOT EXISTS ix_delivery_attempts_alarm_time ON delivery_attempts(alarm_id, attempted_at);
         CREATE INDEX IF NOT EXISTS ix_audit_log_time ON audit_log(occurred_at);
-        """
+        """,
     )
 
+
+def _execute_sql_statements(connection: sqlite3.Connection, script: str) -> None:
+    """Execute a SQL script without ``executescript``'s implicit commit."""
+
+    statement_lines: list[str] = []
+    for line in script.splitlines(keepends=True):
+        statement_lines.append(line)
+        statement = "".join(statement_lines)
+        if sqlite3.complete_statement(statement):
+            if statement.strip():
+                connection.execute(statement)
+            statement_lines.clear()
+    remainder = "".join(statement_lines).strip()
+    if remainder:
+        raise sqlite3.ProgrammingError("incomplete migration statement")

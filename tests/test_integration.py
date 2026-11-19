@@ -32,3 +32,17 @@ async def test_setup_and_unload_do_not_register_delivery_services():
     assert await async_unload_entry(hass, entry)
     assert entry.entry_id not in hass.data[DOMAIN]["entries"]
     assert not hass.services.has_service(DOMAIN, "send")
+
+
+@pytest.mark.asyncio
+async def test_lifecycle_does_not_initialize_sqlite(tmp_path):
+    hass = FakeHass()
+    entry = FakeEntry()
+    database = tmp_path / "manager.sqlite3"
+    entry.data = {"db_path": str(database)}
+
+    assert await async_setup(hass, {})
+    assert await async_setup_entry(hass, entry)
+    assert not database.exists()
+    assert await async_unload_entry(hass, entry)
+    assert not database.exists()

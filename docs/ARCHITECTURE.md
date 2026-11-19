@@ -40,3 +40,27 @@ Async SQLite repository / additive migrations
 
 Phase 1 registriert keinen Versand-Service, beobachtet keine HA-Ereignisse und schreibt keine produktive Datenbank. Ein späterer Versand darf keine beliebigen Caller-Service-Namen ausführen; alle Adapter werden über validierte Zielprofile gewählt.
 
+## Berechtigungsgrenze
+
+`core.permissions.can_access()` ist in Phase 1 ausschließlich eine interne,
+reine Deny-by-default-Grundlage für Domänentests. Sie kennt noch keinen
+authentifizierten Home-Assistant-Benutzer, keine Benutzer-ID aus dem HA-
+Kontext und keine serverseitige Policy-Bindung. Es werden daher keine
+administrativen oder benutzerbezogenen Aktionen freigeschaltet.
+
+Vor einer späteren API oder einem Dienst müssen die Berechtigungen an den
+authentifizierten HA-User-Kontext gebunden, für jede Aktion geprüft, auditiert
+und in einem isolierten HA-Fixture getestet werden.
+
+## Persistenz- und Lifecycle-Grenze
+
+Die SQLite-Datenbank wird in Phase 1 ausschließlich durch einen expliziten
+`SQLiteRepository`-Aufruf erzeugt. `async_setup()` und `async_setup_entry()`
+initialisieren absichtlich keine Datenbank und aktivieren keine Aufzeichnung.
+`async_unload_entry()` entfernt nur den Runtime-Eintrag; es löscht keine
+Datenbank und stoppt keine fremden Ressourcen.
+
+Migrationen laufen innerhalb einer expliziten Transaktion. Der
+Schema-Versionswechsel wird erst nach erfolgreicher Migration committed;
+Fehler führen zu einem Rollback und werden an den aufrufenden Setup-/Worker-
+Pfad weitergegeben.

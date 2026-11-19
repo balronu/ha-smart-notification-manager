@@ -4,7 +4,7 @@ version = "0.1.0.dev1"
 description = "Foundation for a German-first Home Assistant Smart Notification Manager"
 requires-python = ">=3.14.2"
 dependencies = [
-  "homeassistant>=2026.10.4,<2026.11",
+  "homeassistant>=2026.10.4,<2026.12",
 ]
 
 [project.optional-dependencies]
