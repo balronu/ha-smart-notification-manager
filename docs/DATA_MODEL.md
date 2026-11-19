@@ -23,7 +23,7 @@ validierte Formulardaten und sichtbare Bedingungsknoten.
 
 Ein Alarm trennt mindestens:
 
-- `alarm_state`: active, acknowledged, resolved
+- `alarm_state`: pending, active, resolved, suppressed, overdue, manually_closed
 - `acknowledgement_state`: unacknowledged/acknowledged
 - `delivery_state`: pending, sent, failed, suppressed
 - `escalation_state`: idle, running, complete
@@ -31,6 +31,21 @@ Ein Alarm trennt mindestens:
 - `technical_error`
 
 Die aktive Eindeutigkeit liegt auf `(rule_id, cause_key)` und wird zusätzlich durch einen partiellen SQLite-Unique-Index geschützt. Damit kann dieselbe Regelursache nicht zwei aktive Alarmvorgänge erzeugen.
+
+## Phase-4-Alarmvorgang
+
+`alarm_instances` speichert pro auslösender Entity einen eigenen Vorgang mit
+Entity-ID, Friendly Name, Bereich, Priorität, aktuellem/vorigem Zustand,
+Pending-Zeitpunkt, Quittierungsbenutzer und -zeitpunkt, Critical-Bestätigung,
+Wiederholungszähler, nächster Wiederholung, Eskalationsstufe, Überfälligkeit
+und manuellem Abschluss. `alarm_events` protokolliert jeden Übergang
+chronologisch.
+
+Quittierung ist bewusst keine Entwarnung: Sie ändert die separate
+`acknowledgement_state`-Achse und beendet weder die Ursache noch automatisch
+den Alarm. Entwarnung ist nur für einen tatsächlich offenen Vorgang zulässig.
+Technische Delivery-Retries bleiben in `delivery_attempts` getrennt von den
+Alarmwiederholungen.
 
 ## Tabellen v1
 
@@ -40,4 +55,4 @@ Alle Fremdschlüssel werden aktiviert. JSON-Felder bleiben an Integrationsgrenze
 
 ## Migration
 
-Migrationen sind additiv, versioniert über `PRAGMA user_version` und laufen transaktional. Eine Datenbank mit höherer Version wird abgelehnt. SQLite-Zugriffe laufen ausschließlich im Repository-Worker und nicht direkt im HA-Event-Loop.
+Migrationen sind additiv, versioniert über `PRAGMA user_version` und laufen transaktional. Phase 4 erweitert auf Schema v5: Die auslösende Regelversion sowie der Quittierungsmodus und die festgehaltenen erforderlichen Empfänger werden alarmbezogen gespeichert. Eine Datenbank mit höherer Version wird abgelehnt. SQLite-Zugriffe laufen ausschließlich im Repository-Worker und nicht direkt im HA-Event-Loop.

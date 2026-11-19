@@ -29,7 +29,7 @@ class DeliveryService:
         if not authorized:
             raise DeliveryAuthorizationError("Explizite Versandbestätigung erforderlich")
         timestamp = now or datetime.now(UTC)
-        job = await self.store.async_enqueue(request, idempotency_key=idempotency_key, channel_id=channel_id)
+        job = await self.store.async_enqueue(request, idempotency_key=idempotency_key, channel_id=channel_id, alarm_id=request.payload.get("alarm_id"))
         if job.state in {"accepted", "delivered", "simulated", "failed"}:
             return job
         claimed = await self.store.async_claim_due(now=timestamp, attempt_id=job.attempt_id)

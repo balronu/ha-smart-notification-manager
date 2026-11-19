@@ -14,6 +14,7 @@ from .repository import SQLiteRepository
 @dataclass(frozen=True, slots=True)
 class DeliveryJob:
     attempt_id: str
+    alarm_id: str | None
     idempotency_key: str
     recipient_id: str
     channel_id: str
@@ -44,7 +45,7 @@ class DeliveryStore:
     def __init__(self, repository: SQLiteRepository) -> None:
         self.repository = repository
 
-    async def async_enqueue(self, request: DeliveryRequest, *, idempotency_key: str, channel_id: str) -> DeliveryJob:
+    async def async_enqueue(self, request: DeliveryRequest, *, idempotency_key: str, channel_id: str, alarm_id: str | None = None) -> DeliveryJob:
         if not idempotency_key.strip():
             raise ValueError("idempotency key is required")
         now = _utc(datetime.now(UTC))
@@ -53,10 +54,10 @@ class DeliveryStore:
         def operation(connection):
             connection.execute(
                 """INSERT INTO delivery_attempts
-                (attempt_id, idempotency_key, recipient_id, channel_id, state, attempt_number, next_attempt_at, attempted_at, payload_json)
-                VALUES (?, ?, ?, ?, 'pending', 0, NULL, ?, ?)
+                (attempt_id, idempotency_key, alarm_id, recipient_id, channel_id, state, attempt_number, next_attempt_at, attempted_at, payload_json)
+                VALUES (?, ?, ?, ?, ?, 'pending', 0, NULL, ?, ?)
                 ON CONFLICT DO NOTHING""",
-                (request.attempt_id, idempotency_key, request.recipient_id, channel_id, now, payload),
+                (request.attempt_id, idempotency_key, alarm_id, request.recipient_id, channel_id, now, payload),
             )
             row = connection.execute("SELECT * FROM delivery_attempts WHERE idempotency_key = ?", (idempotency_key,)).fetchone()
             return _row_to_job(row)
@@ -127,10 +128,14 @@ class DeliveryStore:
     async def async_list(self) -> list[DeliveryJob]:
         return await self.repository.async_run(lambda connection: [_row_to_job(row) for row in connection.execute("SELECT * FROM delivery_attempts ORDER BY attempted_at, attempt_id")])
 
+    async def async_cancel_pending_for_alarm(self, alarm_id: str) -> int:
+        return await self.repository.async_run(lambda connection: connection.execute("UPDATE delivery_attempts SET state='suppressed',error_code='alarm_closed',error_message='Alarm beendet',next_attempt_at=NULL,lease_until=NULL WHERE alarm_id=? AND state IN ('pending','retry_scheduled')", (alarm_id,)).rowcount)
+
 
 def _row_to_job(row: Any) -> DeliveryJob:
     return DeliveryJob(
         attempt_id=row["attempt_id"],
+        alarm_id=row["alarm_id"],
         idempotency_key=row["idempotency_key"],
         recipient_id=row["recipient_id"],
         channel_id=row["channel_id"],

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 
-CURRENT_SCHEMA_VERSION = 3
+CURRENT_SCHEMA_VERSION = 5
 
 
 def apply_migrations(connection: sqlite3.Connection) -> None:
@@ -32,6 +32,10 @@ def apply_migrations(connection: sqlite3.Connection) -> None:
                 _migration_v2(connection)
             elif next_version == 3:
                 _migration_v3(connection)
+            elif next_version == 4:
+                _migration_v4(connection)
+            elif next_version == 5:
+                _migration_v5(connection)
             else:  # pragma: no cover - guarded by CURRENT_SCHEMA_VERSION
                 raise RuntimeError(f"missing migration {next_version}")
             connection.execute(f"PRAGMA user_version = {next_version}")
@@ -224,6 +228,64 @@ def _migration_v3(connection: sqlite3.Connection) -> None:
             ON delivery_attempts(idempotency_key) WHERE idempotency_key IS NOT NULL;
         CREATE INDEX IF NOT EXISTS ix_delivery_due
             ON delivery_attempts(state, next_attempt_at, lease_until);
+        """,
+    )
+
+
+def _migration_v4(connection: sqlite3.Connection) -> None:
+    """Add durable Phase-4 alarm lifecycle, acknowledgement and escalation data."""
+
+    _execute_sql_statements(
+        connection,
+        """
+        ALTER TABLE alarm_instances ADD COLUMN entity_id TEXT NOT NULL DEFAULT '';
+        ALTER TABLE alarm_instances ADD COLUMN friendly_name TEXT NOT NULL DEFAULT '';
+        ALTER TABLE alarm_instances ADD COLUMN area_id TEXT;
+        ALTER TABLE alarm_instances ADD COLUMN area_name TEXT;
+        ALTER TABLE alarm_instances ADD COLUMN priority TEXT NOT NULL DEFAULT 'normal';
+        ALTER TABLE alarm_instances ADD COLUMN previous_state TEXT;
+        ALTER TABLE alarm_instances ADD COLUMN current_state TEXT;
+        ALTER TABLE alarm_instances ADD COLUMN pending_until TEXT;
+        ALTER TABLE alarm_instances ADD COLUMN acknowledged_by TEXT;
+        ALTER TABLE alarm_instances ADD COLUMN acknowledged_at TEXT;
+        ALTER TABLE alarm_instances ADD COLUMN acknowledgement_scope TEXT NOT NULL DEFAULT 'all';
+        ALTER TABLE alarm_instances ADD COLUMN critical_confirmed INTEGER NOT NULL DEFAULT 0 CHECK (critical_confirmed IN (0, 1));
+        ALTER TABLE alarm_instances ADD COLUMN escalation_level INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE alarm_instances ADD COLUMN overdue_at TEXT;
+        ALTER TABLE alarm_instances ADD COLUMN closed_at TEXT;
+        ALTER TABLE alarm_instances ADD COLUMN closed_by TEXT;
+        ALTER TABLE alarm_instances ADD COLUMN updated_at TEXT;
+        ALTER TABLE alarm_instances ADD COLUMN repeat_interval_seconds INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE alarm_instances ADD COLUMN max_repeats INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE alarm_instances ADD COLUMN repeat_count INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE alarm_instances ADD COLUMN next_repeat_at TEXT;
+        ALTER TABLE alarm_instances ADD COLUMN repeat_only_unacknowledged INTEGER NOT NULL DEFAULT 0 CHECK (repeat_only_unacknowledged IN (0, 1));
+        ALTER TABLE alarm_instances ADD COLUMN max_duration_seconds INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE alarm_instances ADD COLUMN escalation_json TEXT NOT NULL DEFAULT '[]';
+        ALTER TABLE alarm_instances ADD COLUMN parent_alarm_id TEXT;
+        ALTER TABLE acknowledgements ADD COLUMN scope TEXT NOT NULL DEFAULT 'all';
+        ALTER TABLE acknowledgements ADD COLUMN critical_confirmed INTEGER NOT NULL DEFAULT 0 CHECK (critical_confirmed IN (0, 1));
+        DROP INDEX IF EXISTS uq_active_alarm_cause;
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_active_alarm_cause
+            ON alarm_instances(rule_id, cause_key)
+            WHERE alarm_state IN ('pending', 'active', 'overdue');
+        CREATE INDEX IF NOT EXISTS ix_alarm_state_due ON alarm_instances(alarm_state, pending_until, next_repeat_at, overdue_at);
+        """,
+    )
+
+
+def _migration_v5(connection: sqlite3.Connection) -> None:
+    """Pin the triggering rule and persist per-recipient acknowledgement policy."""
+
+    _execute_sql_statements(
+        connection,
+        """
+        ALTER TABLE alarm_instances ADD COLUMN rule_version INTEGER;
+        ALTER TABLE alarm_instances ADD COLUMN acknowledgement_mode TEXT NOT NULL DEFAULT 'any'
+            CHECK (acknowledgement_mode IN ('any', 'all_required'));
+        ALTER TABLE alarm_instances ADD COLUMN required_recipient_ids_json TEXT NOT NULL DEFAULT '[]';
+        CREATE INDEX IF NOT EXISTS ix_acknowledgements_alarm_user
+            ON acknowledgements(alarm_id, user_id);
         """,
     )
 

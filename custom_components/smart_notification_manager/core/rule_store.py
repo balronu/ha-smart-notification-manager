@@ -53,16 +53,19 @@ class RuleStore:
 
         return await self.repository.async_run(operation)
 
-    async def async_get(self, rule_id: str) -> RuleDefinition | None:
+    async def async_get(self, rule_id: str, *, version: int | None = None) -> RuleDefinition | None:
         def operation(connection):
+            version_clause = "" if version is None else " AND rv.version = ?"
+            parameters: tuple[Any, ...] = (rule_id,) if version is None else (rule_id, version)
             row = connection.execute(
-                """
+                f"""
                 SELECT rv.definition_json
                 FROM rule_versions AS rv JOIN rules AS r ON r.rule_id = rv.rule_id
                 WHERE rv.rule_id = ? AND r.deleted_at IS NULL
+                  {version_clause}
                 ORDER BY rv.version DESC LIMIT 1
                 """,
-                (rule_id,),
+                parameters,
             ).fetchone()
             return _rule_from_dict(json.loads(row[0])) if row else None
 

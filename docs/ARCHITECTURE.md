@@ -22,6 +22,14 @@ Async SQLite repository / additive migrations
 
 ## Module
 
+### Phase 4 Alarm-Lifecycle
+
+Phase 4 uses the persistent `AlarmLifecycleStore` for one independent alarm
+per triggering entity. Pending, active, resolved, suppressed, overdue and
+manual-close states are validated server-side. Acknowledgement, delivery and
+escalation remain separate state axes. The alarm WebSocket API is admin-only;
+the panel never invokes a real notification channel.
+
 | Modul | Verantwortung | Phase 2 |
 |---|---|---|
 | Rule Engine | stabile Regeldefinitionen und Versionen | validiertes Regelmodell, CRUD und Soft-Delete |
