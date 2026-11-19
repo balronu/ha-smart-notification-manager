@@ -2,6 +2,8 @@
 
 ## Pflichtprüfungen
 
+Die Phase-1-CI nutzt Python 3.14.2 und den letzten auflösbaren HA-Stable-Fallback 2026.10.4. Das produktive Zielsystem ist HA 2026.11.2; eine vollständige Adapter-/Hassfest-Kompatibilitätsaussage für diese Live-Version bleibt bis zum isolierten HA-Adapter-Gate offen.
+
 - Python-Kernmodelle: IDs, aware timestamps, Zustandsachsen
 - Alarm-Lifecycle: doppelte aktive Ursache, Auflösung, Wiederherstellung
 - SQLite: Erstellung, Foreign Keys, Unique-Index, Migration, Rollback, höheres Schema
@@ -15,4 +17,3 @@
 ## Produktionsgrenzen
 
 Nicht Teil der Phase-1-Tests: Installation auf VM 104, HAOS-Neustart, echte Serviceaufrufe, Pushs, Telefonie, externe Kanal-Authentifizierung, öffentliche Veröffentlichung.
-
