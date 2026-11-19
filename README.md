@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Entwicklungsstatus:** Phase 2 von 12 – visueller Regeleditor in Entwicklung. Noch nicht installierbar, kein Versand, keine Telefonie, kein HACS-Release.
+> **Entwicklungsstatus:** Phase 2 von 12 abgeschlossen und in `main` integriert. Noch nicht installierbar, kein Versand, keine Telefonie, kein HACS-Release.
 
 ## Ziel
 
@@ -17,7 +17,7 @@ Der Smart Notification Manager soll Regeln, Alarmlebenszyklen, Empfänger, Kanä
 - Adapter-, Router-, Rechte-, Bedingungs- und Lifecycle-Verträge
 - Offline-Tests ohne produktive Home-Assistant-Installation; Phase-1-Abnahme mit 17 Tests und grüner GitHub-CI
 
-Die Datenbank wird in Phase 2 nicht automatisch in einer produktiven HA-Instanz angelegt. Das Panel verwaltet nur integrationsinterne Regeldefinitionen; ein Versand-Service existiert noch nicht.
+Die Datenbank wird nicht automatisch in einer produktiven HA-Instanz angelegt. Das Phase-2-Panel verwaltet nur integrationsinterne Regeldefinitionen; ein Versand-Service existiert noch nicht.
 
 ## Dokumentation
 
@@ -29,7 +29,7 @@ Die Datenbank wird in Phase 2 nicht automatisch in einer produktiven HA-Instanz 
 - [Testplan](docs/TEST_PLAN.md)
 - [Release-Policy](docs/RELEASE_POLICY.md)
 
-## Phase-2-Vorschau
+## Phase-2-Ergebnis
 
 Der visuelle Regeleditor unterstützt Regelübersicht, Suche, Prioritäten,
 Entitätsauswahl aus HA-Registern, Zustandsauslöser, verschachtelte
@@ -50,11 +50,11 @@ uv run ruff check .
 python -m compileall custom_components
 ```
 
-Für Phase 2 existieren noch keine öffentlichen Installationsanweisungen. Es werden keine GitHub-Releases, Tags oder öffentlichen HACS-Einträge erzeugt.
+Für die Entwicklungsstände existieren noch keine öffentlichen Installationsanweisungen. Es werden keine GitHub-Releases, Tags oder öffentlichen HACS-Einträge erzeugt. Vor `v1.0.0-beta.1` müssen die offenen Qualitäts-Gates aus den verknüpften GitHub-Issues abgeschlossen sein.
 
 ## Beiträge und Fehler
 
-Beiträge und Fehlerberichte werden erst nach der Phase-1-Abnahme über GitHub Issues und Pull Requests angenommen. Bitte keine Zugangsdaten, privaten Nachrichteninhalte oder Standortdaten in Issues einfügen.
+Beiträge und Fehlerberichte werden über GitHub Issues und Pull Requests angenommen. Bitte keine Zugangsdaten, privaten Nachrichteninhalte oder Standortdaten in Issues einfügen.
 
 ## Lizenz
 
@@ -62,4 +62,4 @@ Die Lizenzentscheidung ist weiterhin offen und wird vor einer öffentlichen Ver�
 
 ## English summary
 
-Smart Notification Manager is a German-first Home Assistant custom integration under development. Phase 2 adds an authenticated admin panel, recursive visual rule editing, versioned SQLite persistence and isolated browser/API tests. Delivery, telephony and HACS publication are not available yet.
+Smart Notification Manager is a German-first Home Assistant custom integration under development. Phase 2 is complete on `main` and adds an authenticated admin panel, recursive visual rule editing, versioned SQLite persistence and isolated browser/API tests. Delivery, telephony and HACS publication are not available yet.

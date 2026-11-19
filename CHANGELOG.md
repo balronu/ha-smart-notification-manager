@@ -1,6 +1,6 @@
 # Changelog
 
-## Unveröffentlicht – Phase 2 in Entwicklung
+## Unveröffentlicht – Phase 2 abgeschlossen
 
 - Validierte Regeldefinitionen mit Prioritäten, Triggern und rekursivem Bedingungsbaum.
 - Deterministische Auswertung für Zustände, Zahlen, Anwesenheit, Wochentage und Zeitfenster.
@@ -31,4 +31,4 @@
 - Explizite pytest-asyncio-Fixture-Loop-Konfiguration ohne Warnung.
 - Anforderungsmatrix, Architektur-, Datenmodell-, API-, Test-, Entwicklungs- und Release-Dokumentation.
 
-Phase 1 ist abgeschlossen und in `main` integriert. Noch nicht veröffentlicht, kein Tag und kein HACS-Release. Phase 2 wurde nicht begonnen.
+Phase 1 und Phase 2 sind in `main` integriert. Noch nicht veröffentlicht, kein Tag und kein HACS-Release. Phase 3 wurde nicht begonnen.
