@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import pytest
 from homeassistant.components import panel_custom
 from smart_notification_manager import (
+    CONFIG_SCHEMA,
     async_setup,
     async_setup_entry,
     async_unload_entry,
@@ -72,3 +73,9 @@ async def test_real_home_assistant_core_lifecycle_isolated(tmp_path):
 def test_panel_registration_uses_current_home_assistant_contract():
     parameters = signature(panel_custom.async_register_panel).parameters
     assert {"hass", "frontend_url_path", "webcomponent_name", "module_url", "require_admin"} <= set(parameters)
+
+
+def test_config_schema_is_a_domain_bound_schema():
+    """Home Assistant must receive a schema object, not the factory function."""
+
+    assert CONFIG_SCHEMA({}) == {}

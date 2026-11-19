@@ -37,8 +37,7 @@ def _require_alarm_role(required: str):
     """Authorize legacy alarm commands using the same Phase-6 role model."""
 
     def decorator(handler):
-        @wraps(handler)
-        async def wrapped(hass, connection, msg):
+        async def authorize(hass, connection, msg):
             try:
                 user_id = _user_id(connection)
                 role = await _alarm_center_store(hass).async_role(
@@ -55,7 +54,23 @@ def _require_alarm_role(required: str):
             except (PermissionError, RuntimeError, sqlite3.Error):
                 connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Authentifizierter Alarmzugriff erforderlich.")
                 return
-            return await handler(hass, connection, msg)
+            result = handler(hass, connection, msg)
+            if hasattr(result, "__await__"):
+                await result
+
+        @wraps(handler)
+        def wrapped(hass, connection, msg):
+            """Schedule async authorization because HA invokes WS handlers synchronously."""
+            coroutine = authorize(hass, connection, msg)
+            schedule = getattr(hass, "async_create_background_task", None)
+            if schedule is None:
+                # Small unit-test doubles may still await the decorated handler.
+                return coroutine
+            schedule(
+                coroutine,
+                f"smart_notification_manager.authorize_{required}",
+                eager_start=True,
+            )
 
         return wrapped
 
@@ -534,7 +549,16 @@ async def websocket_alarm_close(hass: HomeAssistant, connection, msg: dict[str, 
         _send_alarm_storage_error(connection, msg, err)
 
 
-@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/alarm_center/list"})
+@websocket_api.websocket_command(
+    {
+        probatio.Required("type"): "smart_notification_manager/alarm_center/list",
+        probatio.Optional("filters", default={}): dict,
+        probatio.Optional("page", default=1): int,
+        probatio.Optional("page_size", default=25): int,
+        probatio.Optional("sort", default="newest"): str,
+        probatio.Optional("group_by", default=None): probatio.Maybe(str),
+    }
+)
 @websocket_api.async_response
 async def websocket_alarm_center_list(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     try:
