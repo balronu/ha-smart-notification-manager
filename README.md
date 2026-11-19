@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Entwicklungsstatus:** Phase 4 von 12 in Entwicklung. Phase 3 ist in `main` integriert; der Alarm-Lifecycle arbeitet ausschließlich mit simulierten Versandadaptern. Qualitäts-Gates #16–#19 bleiben vorläufige Beta-Blocker.
+> **Entwicklungsstatus:** Phase 4 von 12 abgeschlossen und in `main` integriert. Der Alarm-Lifecycle arbeitet ausschließlich mit simulierten Versandadaptern. Die authentifizierte HA-Runtime-/Panel-E2E-Prüfung sowie Qualitäts-Gates #16–#19 bleiben vorläufige Beta-Blocker.
 
 ## Ziel
 
