@@ -35,6 +35,7 @@ Die Datenbank wird nicht automatisch in einer produktiven HA-Instanz angelegt. D
 - [Phase 9 – Sicherer Automationsassistent](docs/PHASE9_AUTOMATION_MIGRATION.md)
 - [Phase 10 – Beobachtungskarte und Simulation](docs/PHASE10_OBSERVATION_CARD.md)
 - [Phase 11 – Geführte Migration und Wiederherstellung](docs/PHASE11_GUIDED_MIGRATION.md)
+- [Beta-Gates und Abnahmestatus](docs/BETA_GATES.md)
 
 ## Phase-2-Ergebnis
 
