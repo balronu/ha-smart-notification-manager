@@ -15,6 +15,7 @@ from .core.alarm_center import AlarmCenterStore
 from .core.alarm_lifecycle import AlarmLifecycleStore
 from .core.delivery_service import DeliveryService
 from .core.delivery_store import DeliveryStore
+from .core.metrics import async_get_coordinator
 from .core.policies import PolicyStore
 from .core.recipient_store import RecipientStore
 from .core.repository import SQLiteRepository
@@ -51,6 +52,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     runtime["alarm_center_store"] = AlarmCenterStore(repository)
     runtime["policy_store"] = PolicyStore(repository)
     runtime["delivery_service"] = DeliveryService(runtime["delivery_store"], runtime["policy_store"])
+    if hasattr(hass, "config_entries") and hasattr(hass.config_entries, "async_forward_entry_setups"):
+        runtime["metrics_coordinator"] = await async_get_coordinator(hass, repository)
+        await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "binary_sensor", "switch"])
     if hasattr(hass, "config"):
         async_register_websocket(hass)
     if getattr(hass, "http", None) is not None and not runtime.get("frontend_registered"):
@@ -69,6 +73,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             config_panel_domain=DOMAIN,
         )
         frontend.add_extra_js_url(hass, f"{FRONTEND_URL_BASE}/smart-notification-manager.js?v=2")
+        frontend.add_extra_js_url(hass, f"{FRONTEND_URL_BASE}/smart-notification-manager-card.js?v=1")
         runtime["frontend_registered"] = True
     return True
 
@@ -77,6 +82,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload only this integration's runtime metadata."""
 
     runtime = hass.data.get(DOMAIN, {})
+    if hasattr(hass, "config_entries") and hasattr(hass.config_entries, "async_unload_platforms"):
+        await hass.config_entries.async_unload_platforms(entry, ["sensor", "binary_sensor", "switch"])
     runtime.get("entries", {}).pop(entry.entry_id, None)
     runtime.pop("rule_store", None)
     runtime.pop("recipient_store", None)
@@ -85,5 +92,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     runtime.pop("alarm_store", None)
     runtime.pop("alarm_center_store", None)
     runtime.pop("policy_store", None)
+    runtime.pop("metrics_coordinator", None)
     runtime.pop("repository", None)
     return True

@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Entwicklungsstatus:** Phase 6 von 12 ist in `main` integriert. Die Alarmzentrale mit serverseitigen Filtern, Kategorien, persönlichen Ansichten, Timeline und Rollenprüfung ist abgeschlossen. Issue #24, die authentifizierte HA-Runtime-/Panel-E2E-Prüfung und Qualitäts-Gates #16–#19 bleiben vor der Beta offen.
+> **Entwicklungsstatus:** Phase 7 befindet sich auf dem Feature-Branch `feature/phase-7-lovelace-card` in Entwicklung. Die eigenständige Lovelace-Karte und native HA-Entitäten sind implementiert und werden vor dem PR-Abschluss isoliert getestet. Issue #24, die authentifizierte HA-Runtime-/Panel-E2E-Prüfung und Qualitäts-Gates #16–#19 bleiben vor der Beta offen.
 
 ## Ziel
 
@@ -30,6 +30,7 @@ Die Datenbank wird nicht automatisch in einer produktiven HA-Instanz angelegt. D
 - [Release-Policy](docs/RELEASE_POLICY.md)
 - [Phase 5 – Benachrichtigungspolitiken](docs/PHASE5_NOTIFICATION_POLICIES.md)
 - [Phase 6 – Alarmzentrale](docs/PHASE6_ALARM_CENTER.md)
+- [Phase 7 – Lovelace-Alarmkarte](docs/PHASE7_LOVELACE_CARD.md)
 
 ## Phase-2-Ergebnis
 
@@ -83,6 +84,14 @@ keine regulären Delivery-Aufträge; dies ist in [Issue #24](https://github.com/
 als verbindlicher Beta-Vorbehalt dokumentiert.
 
 ## Entwicklung
+
+### Phase 7 – in Entwicklung
+
+Die eigenständige Karte `custom:smart-notification-manager-card` bietet die
+Ansichten Kompakt, Liste und Detail, unabhängige Filter pro Karteninstanz,
+deutsche Editorfelder, WebSocket-only-Datenzugriff und serverseitig geschützte
+Quittierung. Native Sensoren, Binärsensoren und Rule-Switches nutzen die
+bestehende Alarm- und RuleStore-Datenkette.
 
 ```bash
 uv sync --extra test
