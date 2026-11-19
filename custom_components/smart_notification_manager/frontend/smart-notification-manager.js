@@ -73,9 +73,9 @@
     set hass(value) { this._hass = value; this.load(); }
     connectedCallback() { this.load(); }
     async load() { if (!this._hass?.callWS) return; try { const data = await this._hass.callWS({ type: "smart_notification_manager/list" }); this._editor.data = { rules: data.rules, entities: data.entities, onSave: (rule) => this.save(rule), onDelete: (id) => this.remove(id), onDuplicate: (rule) => this.duplicate(rule) }; } catch (error) { this._editor.data = { rules: [], entities: [] }; this._editor._error = `Regeln konnten nicht geladen werden: ${error.message || error}`; this._editor.render(); } }
-    async save(rule) { await this._hass.callWS({ type: "smart_notification_manager/save", rule }); await this.load(); }
-    async remove(ruleId) { await this._hass.callWS({ type: "smart_notification_manager/delete", rule_id: ruleId }); await this.load(); }
-    async duplicate(rule) { await this._hass.callWS({ type: "smart_notification_manager/duplicate", rule }); await this.load(); }
+    async save(rule) { try { await this._hass.callWS({ type: "smart_notification_manager/save", rule }); await this.load(); } catch (error) { this._editor._error = "Die Regel konnte nicht gespeichert werden. Prüfe die Eingaben oder die Berechtigung."; this._editor.render(); } }
+    async remove(ruleId) { try { await this._hass.callWS({ type: "smart_notification_manager/delete", rule_id: ruleId }); await this.load(); } catch (error) { this._editor._error = "Die Regel konnte nicht gelöscht werden."; this._editor.render(); } }
+    async duplicate(rule) { try { await this._hass.callWS({ type: "smart_notification_manager/duplicate", rule }); await this.load(); } catch (error) { this._editor._error = "Die Regel konnte nicht dupliziert werden."; this._editor.render(); } }
   }
   if (!customElements.get("smart-notification-rule-editor")) customElements.define("smart-notification-rule-editor", SmartNotificationRuleEditor);
   if (!customElements.get("smart-notification-manager-panel")) customElements.define("smart-notification-manager-panel", SmartNotificationManagerPanel);

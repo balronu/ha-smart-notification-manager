@@ -15,7 +15,7 @@
         rules: [
           {rule_id: "fixture-door", name: "Haustür offen", category: "Sicherheit", priority: "warning", enabled: true, description: "Meldung bei geöffneter Haustür", triggers: [{entity_ids: ["binary_sensor.haustuer"], to_state: "on", minimum_duration_seconds: 30, delay_seconds: 0}], conditions: {kind: "all", children: [{kind: "entity_state", value: {entity_id: "binary_sensor.haustuer", state: "on"}}]}}
         ],
-        onSave: (rule) => { document.body.dataset.savedVersion = String(rule.version); document.body.dataset.saved = rule.triggers.length > 1 ? "passed" : "failed"; },
+        onSave: (rule) => { document.body.dataset.savedVersion = String(rule.version); document.body.dataset.saved = rule.triggers.length > 1 ? "passed" : "failed"; editor.data = { ...editor, rules: [rule], entities: editor._entities }; editor.open(rule.rule_id); document.body.dataset.reloaded = editor.shadowRoot.querySelector('h2')?.textContent === rule.name ? "passed" : "failed"; },
         onDelete: (id) => console.log("Fixture delete", id),
         onDuplicate: (rule) => console.log("Fixture duplicate", rule)
       };

@@ -15,6 +15,15 @@ verwendet jedoch einen authentifizierten Home-Assistant-WebSocket-Vertrag.
 - `EntitySnapshot`: schreibgeschützter Friendly Name, Entity-ID, Bereich, Domain und Zustand aus HA-Registern
 - `EvaluationContext`: reproduzierbarer Zustandssnapshot für die Bedingungsauswertung
 
+## WebSocket-Fehlervertrag
+
+Ungültige Regelpayloads und Versionskonflikte werden als `invalid_format` mit
+der stabilen Meldung „Die Regel ist ungültig oder darf nicht geändert werden.“
+zurückgegeben. Fehlende Laufzeit, SQLite-Fehler und nicht verfügbare
+Persistenz werden als `unknown_error` mit „Die Regelverwaltung ist derzeit
+nicht verfügbar.“ gemeldet. Interne Exception-Texte und Stacktraces bleiben im
+Serverlog und werden nicht an das Frontend übertragen.
+
 ## Editor-Grenze
 
 `frontend/smart-notification-manager.js` ist eine responsive, deutschsprachige

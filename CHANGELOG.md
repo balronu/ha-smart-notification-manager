@@ -13,6 +13,11 @@
 - Optimistische Regelversionierung mit Konfliktschutz sowie serverseitiger
   Ablehnung von NaN/Infinity, ungültigen Wertebereichen, Zeitfenstern und
   Wochentagen.
+- Zustands- und Anwesenheitsauswertung korrigiert: identische Zustände erzeugen
+  keinen neuen Trigger, unbekannte Anwesenheit wird nicht als Abwesenheit
+  gewertet.
+- WebSocket-Fehler werden kontrolliert und ohne interne Stacktraces an das
+  Frontend gemeldet; konkurrierende Regeländerungen sind getestet.
 
 ## Unveröffentlicht – Phase 1 abgeschlossen
 

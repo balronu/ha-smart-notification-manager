@@ -15,7 +15,7 @@ from .rules import Comparison, ConditionNode
 class EvaluationContext:
     states: dict[str, str]
     numeric_states: dict[str, float]
-    presence: dict[str, bool]
+    presence: dict[str, bool | str | None]
     now: datetime
 
 
@@ -39,7 +39,11 @@ def evaluate_condition(node: ConditionNode, context: EvaluationContext) -> bool:
             return False
         return _compare(current, value["comparison"], float(value["threshold"]), value.get("upper_threshold"))
     if node.kind == "presence":
-        return context.presence.get(node.value["entity_id"], False) == bool(node.value.get("present", True))
+        entity_id = node.value["entity_id"]
+        current = context.presence.get(entity_id)
+        if entity_id not in context.presence or not isinstance(current, bool):
+            return False
+        return current == bool(node.value.get("present", True))
     if node.kind == "weekday":
         return context.now.weekday() in {int(day) for day in node.value["days"]}
     if node.kind == "time_window":
@@ -89,6 +93,8 @@ def evaluate_state_trigger(
     if before == "unavailable" and unavailable_policy != "match":
         return False
     if after == "unavailable" and unavailable_policy != "match":
+        return False
+    if before == after:
         return False
     if elapsed_seconds < minimum_duration_seconds:
         return False

@@ -95,6 +95,24 @@ def test_condition_unknown_values_do_not_match():
     assert evaluate_state_trigger("on", "unknown", from_state="on", to_state="unknown", unknown_policy="match")
 
 
+def test_state_trigger_requires_an_actual_transition():
+    assert evaluate_state_trigger("off", "on", from_state="off", to_state="on")
+    assert not evaluate_state_trigger("on", "on", from_state="on", to_state="on")
+    assert not evaluate_state_trigger("off", "off", from_state="off", to_state="off")
+    assert not evaluate_state_trigger("unavailable", "unavailable", from_state=None, to_state=None, unavailable_policy="match")
+
+
+def test_presence_requires_a_known_boolean_state():
+    present = ConditionNode("presence", {"entity_id": "person.michael", "present": True})
+    absent = ConditionNode("presence", {"entity_id": "person.michael", "present": False})
+    base = {"states": {}, "numeric_states": {}, "now": datetime.now(UTC)}
+    assert evaluate_condition(present, EvaluationContext(presence={"person.michael": True}, **base))
+    assert not evaluate_condition(absent, EvaluationContext(presence={"person.michael": True}, **base))
+    assert evaluate_condition(absent, EvaluationContext(presence={"person.michael": False}, **base))
+    assert not evaluate_condition(absent, EvaluationContext(presence={}, **base))
+    assert not evaluate_condition(absent, EvaluationContext(presence={"person.michael": "unknown"}, **base))
+
+
 def test_numeric_comparison_between():
     condition = ConditionNode("numeric", {"entity_id": "sensor.x", "comparison": Comparison.BETWEEN.value, "threshold": 10, "upper_threshold": 20})
     context = EvaluationContext(states={}, numeric_states={"sensor.x": 15}, presence={}, now=datetime.now(UTC))

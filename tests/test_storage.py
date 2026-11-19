@@ -1,3 +1,4 @@
+import asyncio
 import sqlite3
 from dataclasses import replace
 from datetime import UTC, datetime
@@ -142,3 +143,16 @@ async def test_rule_store_versions_permissions_and_soft_delete(tmp_path: Path):
     await store.async_delete(rule.rule_id, now=rule.updated_at, access=access)
     assert await store.async_get(rule.rule_id) is None
     assert len(await store.async_list()) == 1
+
+
+@pytest.mark.asyncio
+async def test_concurrent_rule_updates_have_one_winner(tmp_path: Path):
+    store = RuleStore(SQLiteRepository(tmp_path / "manager.sqlite3"))
+    access = EditorAccess("user-1", frozenset({"edit"}))
+    rule = await store.async_save(valid_storage_rule(), access)
+    candidates = [replace(rule, name=f"Änderung {index}", version=2) for index in (1, 2)]
+    results = await asyncio.gather(*(store.async_save(candidate, access) for candidate in candidates), return_exceptions=True)
+    assert sum(isinstance(result, Exception) for result in results) == 1
+    assert sum(not isinstance(result, Exception) for result in results) == 1
+    assert (await store.async_get(rule.rule_id)).version == 2
+    assert "Änderung" in (await store.async_get(rule.rule_id)).name
