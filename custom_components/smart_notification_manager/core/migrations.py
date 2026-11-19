@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 
-CURRENT_SCHEMA_VERSION = 1
+CURRENT_SCHEMA_VERSION = 2
 
 
 def apply_migrations(connection: sqlite3.Connection) -> None:
@@ -22,12 +22,19 @@ def apply_migrations(connection: sqlite3.Connection) -> None:
     version = int(connection.execute("PRAGMA user_version").fetchone()[0])
     if version > CURRENT_SCHEMA_VERSION:
         raise RuntimeError("database schema is newer than this integration")
-    if version == 0:
+    while version < CURRENT_SCHEMA_VERSION:
         try:
             connection.execute("BEGIN")
-            _migration_v1(connection)
-            connection.execute(f"PRAGMA user_version = {CURRENT_SCHEMA_VERSION}")
+            next_version = version + 1
+            if next_version == 1:
+                _migration_v1(connection)
+            elif next_version == 2:
+                _migration_v2(connection)
+            else:  # pragma: no cover - guarded by CURRENT_SCHEMA_VERSION
+                raise RuntimeError(f"missing migration {next_version}")
+            connection.execute(f"PRAGMA user_version = {next_version}")
             connection.commit()
+            version = next_version
         except BaseException:
             connection.rollback()
             raise
@@ -177,6 +184,23 @@ def _migration_v1(connection: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS ix_alarm_events_alarm_time ON alarm_events(alarm_id, occurred_at);
         CREATE INDEX IF NOT EXISTS ix_delivery_attempts_alarm_time ON delivery_attempts(alarm_id, attempted_at);
         CREATE INDEX IF NOT EXISTS ix_audit_log_time ON audit_log(occurred_at);
+        """,
+    )
+
+
+def _migration_v2(connection: sqlite3.Connection) -> None:
+    """Add editable rule metadata without touching existing alarm history."""
+
+    _execute_sql_statements(
+        connection,
+        """
+        ALTER TABLE rules ADD COLUMN description TEXT NOT NULL DEFAULT '';
+        ALTER TABLE rules ADD COLUMN area_id TEXT;
+        ALTER TABLE rules ADD COLUMN area_name TEXT;
+        ALTER TABLE rules ADD COLUMN priority TEXT NOT NULL DEFAULT 'normal'
+            CHECK (priority IN ('info', 'normal', 'warning', 'critical'));
+        ALTER TABLE rules ADD COLUMN deleted_at TEXT;
+        CREATE INDEX IF NOT EXISTS ix_rules_enabled ON rules(enabled, deleted_at);
         """,
     )
 

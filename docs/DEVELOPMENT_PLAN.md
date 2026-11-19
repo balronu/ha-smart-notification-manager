@@ -3,7 +3,7 @@
 | Phase | Inhalt | Abnahme |
 |---:|---|---|
 | 1 | Fundament, Modelle, Storage, Flows, Rechtebasis, Tests | abgeschlossen: in `main` integriert, 17 Tests und GitHub-CI grün |
-| 2 | Read-only HA-Discovery und Importmodell | Fixture-Import ohne Versand |
+| 2 | Read-only HA-Discovery, Regel-/Bedingungseditor und Importmodell | in Entwicklung: isolierter Editor, Regelpersistenz und Bedingungstests |
 | 3 | Regel-/Bedingungseditor und CRUD-Verträge | validierte Regelversionen |
 | 4 | Empfänger, Geräte, Gruppen und Fähigkeiten | deterministische Zielprofile |
 | 5 | Delivery Router und erste HA-Notify-Adapter | isolierte Mock-Zustellung |

@@ -1,5 +1,24 @@
 # Datenmodell
 
+## Phase 2 Regeldefinition
+
+Eine Regel wird als versionierte `RuleDefinition` gespeichert und enthält:
+
+- stabile UUID, Name, Beschreibung, Kategorie und optionalen HA-Bereich
+- Priorität `Info`, `Normal`, `Warnung` oder `Critical`
+- Aktivierungsstatus und Erstellungs-/Änderungszeitpunkte
+- einen oder mehrere Zustands- oder numerische Auslöser
+- Mindestdauer, Verzögerung, Hysterese sowie explizite `unknown`-/`unavailable`-Policies
+- rekursiven Bedingungsbaum mit UND-/ODER-Gruppen
+
+Die fachliche Definition liegt als JSON in `rule_versions`. Die Tabelle
+`rules` enthält die indexierbaren Metadaten. Löschen ist ein Soft-Delete:
+Alarmhistorie und Fremdschlüssel bleiben erhalten.
+
+Die Auswertung in `core/evaluator.py` ist vollständig frontend-unabhängig und
+deterministisch. Der Web-Editor erzeugt keine freie JSON-Eingabe, sondern
+validierte Formulardaten und sichtbare Bedingungsknoten.
+
 ## Zustandsachsen
 
 Ein Alarm trennt mindestens:
@@ -22,4 +41,3 @@ Alle Fremdschlüssel werden aktiviert. JSON-Felder bleiben an Integrationsgrenze
 ## Migration
 
 Migrationen sind additiv, versioniert über `PRAGMA user_version` und laufen transaktional. Eine Datenbank mit höherer Version wird abgelehnt. SQLite-Zugriffe laufen ausschließlich im Repository-Worker und nicht direkt im HA-Event-Loop.
-
