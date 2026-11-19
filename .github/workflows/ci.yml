@@ -57,6 +57,7 @@ jobs:
 
   hacs:
     name: hacs
+    if: ${{ github.event.repository.visibility == 'public' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
