@@ -15,6 +15,8 @@ def test_phase10_observation_card_is_mirrored_and_read_only():
     assert 'smart_notification_manager/phase10/observe' in source
     assert 'data-action-guarantee="no-action"' in source
     assert 'Keine produktive Aktion' in source and 'window.customCards' in source
+    assert 'config-changed' in source and 'detail:{config:{...this._config}}' in source
+    assert '_clearTimer' in source and 'setCustomValidity' in source
 
 
 def test_phase10_simulation_reports_missing_data_without_delivery_claim():
