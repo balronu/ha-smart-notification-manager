@@ -1,0 +1,26 @@
+[project]
+name = "ha-smart-notification-manager"
+version = "0.1.0.dev1"
+description = "Foundation for a German-first Home Assistant Smart Notification Manager"
+requires-python = ">=3.13"
+dependencies = [
+  "homeassistant>=2026.11,<2027.0",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8.4",
+  "pytest-asyncio>=1.2",
+  "pytest-homeassistant-custom-component>=0.13",
+  "ruff>=0.14",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["custom_components"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+

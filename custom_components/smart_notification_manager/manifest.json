@@ -1,0 +1,13 @@
+{
+  "domain": "smart_notification_manager",
+  "name": "Smart Notification Manager",
+  "version": "0.1.0.dev1",
+  "documentation": "https://github.com/balronu/ha-smart-notification-manager",
+  "issue_tracker": "https://github.com/balronu/ha-smart-notification-manager/issues",
+  "codeowners": ["@balronu"],
+  "config_flow": true,
+  "integration_type": "service",
+  "iot_class": "local_push",
+  "requirements": []
+}
+
