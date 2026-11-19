@@ -260,6 +260,7 @@ def _migration_v4(connection: sqlite3.Connection) -> None:
         ALTER TABLE alarm_instances ADD COLUMN repeat_only_unacknowledged INTEGER NOT NULL DEFAULT 0 CHECK (repeat_only_unacknowledged IN (0, 1));
         ALTER TABLE alarm_instances ADD COLUMN max_duration_seconds INTEGER NOT NULL DEFAULT 0;
         ALTER TABLE alarm_instances ADD COLUMN escalation_json TEXT NOT NULL DEFAULT '[]';
+        ALTER TABLE alarm_instances ADD COLUMN parent_alarm_id TEXT;
         ALTER TABLE acknowledgements ADD COLUMN scope TEXT NOT NULL DEFAULT 'all';
         ALTER TABLE acknowledgements ADD COLUMN critical_confirmed INTEGER NOT NULL DEFAULT 0 CHECK (critical_confirmed IN (0, 1));
         DROP INDEX IF EXISTS uq_active_alarm_cause;

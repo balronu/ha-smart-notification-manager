@@ -90,7 +90,7 @@ def _record(row) -> AlarmRecord:
         closed_at=_dt(row["closed_at"]), closed_by=row["closed_by"], closure_reason=row["closure_reason"],
         repeat_interval_seconds=int(row["repeat_interval_seconds"]), max_repeats=int(row["max_repeats"]), repeat_count=int(row["repeat_count"]),
         next_repeat_at=_dt(row["next_repeat_at"]), max_duration_seconds=int(row["max_duration_seconds"]),
-        escalation_stages=tuple(json.loads(row["escalation_json"] or "[]")), parent_alarm_id=None,
+        escalation_stages=tuple(json.loads(row["escalation_json"] or "[]")), parent_alarm_id=row["parent_alarm_id"],
     )
 
 
@@ -108,13 +108,13 @@ class AlarmLifecycleStore:
         if not entity_id or not rule_id: raise ValueError("rule_id and entity_id are required")
         pending_until = now + timedelta(seconds=policy.delay_seconds) if policy.delay_seconds else None
         state = AlarmState.PENDING.value if pending_until else AlarmState.ACTIVE.value
-        next_repeat = now + timedelta(seconds=policy.repeat_interval_seconds) if policy.repeat_interval_seconds else None
+        next_repeat = now + timedelta(seconds=policy.repeat_interval_seconds) if policy.repeat_interval_seconds and policy.max_repeats > 0 else None
 
         def operation(connection):
             existing = connection.execute("SELECT * FROM alarm_instances WHERE rule_id=? AND cause_key=? AND alarm_state IN ('pending','active','overdue')", (rule_id, entity_id)).fetchone()
             if existing: return _record(existing), False
             alarm_id = new_id(); stamp = now.isoformat()
-            connection.execute("""INSERT INTO alarm_instances(alarm_id,rule_id,cause_key,alarm_state,acknowledgement_state,delivery_state,escalation_state,started_at,entity_id,friendly_name,area_id,area_name,priority,previous_state,current_state,pending_until,updated_at,repeat_interval_seconds,max_repeats,next_repeat_at,repeat_only_unacknowledged,max_duration_seconds,escalation_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (alarm_id,rule_id,entity_id,state,"unacknowledged","pending","running" if policy.escalation_stages else "idle",stamp,entity_id,friendly_name,area_id,area_name,priority,previous_state,current_state,_iso(pending_until),stamp,policy.repeat_interval_seconds,policy.max_repeats,_iso(next_repeat),int(policy.repeat_only_unacknowledged),policy.max_duration_seconds,json.dumps(policy.escalation_stages, ensure_ascii=False)))
+            connection.execute("""INSERT INTO alarm_instances(alarm_id,rule_id,cause_key,alarm_state,acknowledgement_state,delivery_state,escalation_state,started_at,entity_id,friendly_name,area_id,area_name,priority,previous_state,current_state,pending_until,updated_at,repeat_interval_seconds,max_repeats,next_repeat_at,repeat_only_unacknowledged,max_duration_seconds,escalation_json,parent_alarm_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (alarm_id,rule_id,entity_id,state,"unacknowledged","pending","running" if policy.escalation_stages else "idle",stamp,entity_id,friendly_name,area_id,area_name,priority,previous_state,current_state,_iso(pending_until),stamp,policy.repeat_interval_seconds,policy.max_repeats,_iso(next_repeat),int(policy.repeat_only_unacknowledged),policy.max_duration_seconds,json.dumps(policy.escalation_stages, ensure_ascii=False),parent_alarm_id))
             self._event(connection, alarm_id, "triggered", {"entity_id": entity_id, "state": state}, now)
             return _record(connection.execute("SELECT * FROM alarm_instances WHERE alarm_id=?", (alarm_id,)).fetchone()), True
         return await self.repository.async_run(operation)
@@ -137,11 +137,15 @@ class AlarmLifecycleStore:
     async def async_events(self, alarm_id: str) -> list[dict[str, Any]]:
         return await self.repository.async_run(lambda c: [{"event_id": r[0], "alarm_id": r[1], "event_type": r[2], "payload": json.loads(r[3]), "occurred_at": r[4]} for r in c.execute("SELECT event_id,alarm_id,event_type,payload_json,occurred_at FROM alarm_events WHERE alarm_id=? ORDER BY occurred_at,event_id", (alarm_id,))])
 
-    async def async_activate_pending(self, *, now: datetime) -> list[AlarmRecord]:
+    async def async_activate_pending(self, *, now: datetime, validations: dict[str, bool] | None = None) -> list[AlarmRecord]:
         ensure_aware(now)
         def operation(connection):
             rows = connection.execute("SELECT * FROM alarm_instances WHERE alarm_state='pending' AND pending_until IS NOT NULL AND pending_until<=?", (now.isoformat(),)).fetchall(); result=[]
             for row in rows:
+                if validations is not None and not validations.get(row["alarm_id"], False):
+                    connection.execute("UPDATE alarm_instances SET alarm_state='suppressed',closure_reason=?,closed_at=?,updated_at=?,next_repeat_at=NULL,escalation_state='complete' WHERE alarm_id=?", ("Auslöser bei erneuter Prüfung nicht mehr gültig.", now.isoformat(), now.isoformat(), row["alarm_id"]))
+                    self._event(connection, row["alarm_id"], "suppressed", {"reason": "pending_revalidation_failed"}, now)
+                    continue
                 connection.execute("UPDATE alarm_instances SET alarm_state='active',pending_until=NULL,updated_at=? WHERE alarm_id=?", (now.isoformat(),row["alarm_id"])); self._event(connection,row["alarm_id"],"activated",{},now); result.append(_record(connection.execute("SELECT * FROM alarm_instances WHERE alarm_id=?",(row["alarm_id"],)).fetchone()))
             return result
         return await self.repository.async_run(operation)
@@ -153,6 +157,7 @@ class AlarmLifecycleStore:
             if not row: raise ValueError("alarm not found")
             if row["alarm_state"] != AlarmState.PENDING.value: raise ValueError("only pending alarms can be suppressed")
             connection.execute("UPDATE alarm_instances SET alarm_state='suppressed',closure_reason=?,closed_at=?,updated_at=?,next_repeat_at=NULL,escalation_state='complete' WHERE alarm_id=?", (reason, now.isoformat(), now.isoformat(), alarm_id))
+            connection.execute("UPDATE delivery_attempts SET state='suppressed',error_code='alarm_closed',error_message='Alarm unterdrückt',next_attempt_at=NULL,lease_until=NULL WHERE alarm_id=? AND state IN ('pending','retry_scheduled')", (alarm_id,))
             self._event(connection, alarm_id, "suppressed", {"reason": reason}, now)
             return _record(connection.execute("SELECT * FROM alarm_instances WHERE alarm_id=?", (alarm_id,)).fetchone())
         return await self.repository.async_run(operation)
@@ -168,6 +173,7 @@ class AlarmLifecycleStore:
                     continue
                 if int(row["max_repeats"]) and int(row["repeat_count"]) >= int(row["max_repeats"]):
                     connection.execute("UPDATE alarm_instances SET next_repeat_at=NULL,updated_at=? WHERE alarm_id=?", (now.isoformat(), row["alarm_id"]))
+                    continue
                 else:
                     count = int(row["repeat_count"]) + 1
                     next_at = now + timedelta(seconds=int(row["repeat_interval_seconds"])) if int(row["repeat_interval_seconds"]) else None
@@ -185,6 +191,9 @@ class AlarmLifecycleStore:
             rows = connection.execute("SELECT * FROM alarm_instances WHERE alarm_state IN ('active','overdue') AND escalation_state='running'").fetchall(); result = []
             for row in rows:
                 stages = tuple(json.loads(row["escalation_json"] or "[]")); level = int(row["escalation_level"])
+                if row["acknowledgement_state"] == "acknowledged":
+                    connection.execute("UPDATE alarm_instances SET escalation_state='complete',updated_at=? WHERE alarm_id=? AND escalation_level=?", (now.isoformat(), row["alarm_id"], level))
+                    continue
                 if level >= len(stages):
                     connection.execute("UPDATE alarm_instances SET escalation_state='complete',updated_at=? WHERE alarm_id=?", (now.isoformat(), row["alarm_id"]))
                     continue
@@ -193,7 +202,9 @@ class AlarmLifecycleStore:
                 if due > now: continue
                 next_level = level + 1
                 state = "complete" if next_level >= len(stages) else "running"
-                connection.execute("UPDATE alarm_instances SET escalation_level=?,escalation_state=?,updated_at=? WHERE alarm_id=?", (next_level, state, now.isoformat(), row["alarm_id"]))
+                updated = connection.execute("UPDATE alarm_instances SET escalation_level=?,escalation_state=?,updated_at=? WHERE alarm_id=? AND escalation_level=? AND alarm_state IN ('active','overdue')", (next_level, state, now.isoformat(), row["alarm_id"], level))
+                if updated.rowcount != 1:
+                    continue
                 self._event(connection, row["alarm_id"], "escalated", {"level": next_level, "stage": stage}, now)
                 result.append(_record(connection.execute("SELECT * FROM alarm_instances WHERE alarm_id=?", (row["alarm_id"],)).fetchone()))
             return result
@@ -211,12 +222,28 @@ class AlarmLifecycleStore:
         return await self.repository.async_run(operation)
 
     async def async_acknowledge_many(self, alarm_ids: list[str], **kwargs) -> list[AlarmRecord]:
-        result=[]
-        for alarm_id in alarm_ids: result.append(await self.async_acknowledge(alarm_id, **kwargs))
-        return result
-
-    async def async_resolve(self, alarm_id: str, *, now: datetime, reason: str = "sensor_normalized") -> AlarmRecord:
+        now = kwargs["now"]; user_id = kwargs["user_id"]; scope = kwargs.get("scope", "all"); critical_confirmed = kwargs.get("critical_confirmed", False)
         ensure_aware(now)
+        if not user_id or not alarm_ids: raise PermissionError("authenticated user and alarms required")
+        def operation(connection):
+            unique_ids = tuple(dict.fromkeys(alarm_ids)); placeholders = ",".join("?" for _ in unique_ids)
+            rows = connection.execute(f"SELECT * FROM alarm_instances WHERE alarm_id IN ({placeholders})", unique_ids).fetchall()
+            if len(rows) != len(unique_ids): raise ValueError("one or more alarms not found")
+            if any(row["alarm_state"] not in RESOLVABLE_STATES for row in rows): raise ValueError("one or more alarms cannot be acknowledged")
+            if any(row["priority"] == "critical" for row in rows) and not critical_confirmed: raise PermissionError("critical acknowledgement requires confirmation")
+            for row in rows:
+                connection.execute("UPDATE alarm_instances SET acknowledgement_state='acknowledged',acknowledged_by=?,acknowledged_at=?,acknowledgement_scope=?,critical_confirmed=?,updated_at=? WHERE alarm_id=?", (user_id, now.isoformat(), scope, int(critical_confirmed), now.isoformat(), row["alarm_id"]))
+                connection.execute("INSERT INTO acknowledgements(acknowledgement_id,alarm_id,user_id,acknowledged_at,scope,critical_confirmed) VALUES (?,?,?,?,?,?)", (new_id(), row["alarm_id"], user_id, now.isoformat(), scope, int(critical_confirmed)))
+                self._event(connection, row["alarm_id"], "acknowledged", {"user_id": user_id, "scope": scope}, now)
+            return [_record(connection.execute("SELECT * FROM alarm_instances WHERE alarm_id=?", (alarm_id,)).fetchone()) for alarm_id in unique_ids]
+        return await self.repository.async_run(operation)
+
+    async def async_resolve(self, alarm_id: str, *, now: datetime, reason: str = "sensor_normalized", actual_state: str | None = None, expected_active_state: str | None = None, available: bool = True) -> AlarmRecord:
+        ensure_aware(now)
+        if not available or actual_state in {"unknown", "unavailable", None}:
+            raise ValueError("sensor state is not safely available")
+        if expected_active_state is not None and actual_state == expected_active_state:
+            raise ValueError("alarm cause is still active")
         current = await self.async_get(alarm_id)
         if current is not None and current.alarm_state in (AlarmState.RESOLVED.value, AlarmState.SUPPRESSED.value, AlarmState.MANUALLY_CLOSED.value):
             raise ValueError("alarm is already closed")
@@ -235,7 +262,7 @@ class AlarmLifecycleStore:
             if not row: raise ValueError("alarm not found")
             if row["alarm_state"] not in ("pending", "active", "overdue"): raise ValueError("alarm is already closed")
             if state == "manually_closed" and row["priority"] == "critical" and not critical_confirmed: raise PermissionError("critical close requires confirmation")
-            connection.execute("UPDATE alarm_instances SET alarm_state=?,closure_reason=?,closed_at=?,closed_by=?,resolved_at=?,updated_at=?,next_repeat_at=NULL,escalation_state='complete' WHERE alarm_id=?",(state,reason,now.isoformat(),user_id,now.isoformat() if state=="resolved" else None,now.isoformat(),alarm_id)); self._event(connection,alarm_id,event_type,{"reason":reason,"user_id":user_id},now); return _record(connection.execute("SELECT * FROM alarm_instances WHERE alarm_id=?",(alarm_id,)).fetchone())
+            connection.execute("UPDATE alarm_instances SET alarm_state=?,closure_reason=?,closed_at=?,closed_by=?,resolved_at=?,updated_at=?,next_repeat_at=NULL,escalation_state='complete' WHERE alarm_id=?",(state,reason,now.isoformat(),user_id,now.isoformat() if state=="resolved" else None,now.isoformat(),alarm_id)); connection.execute("UPDATE delivery_attempts SET state='suppressed',error_code='alarm_closed',error_message='Alarm beendet',next_attempt_at=NULL,lease_until=NULL WHERE alarm_id=? AND state IN ('pending','retry_scheduled')", (alarm_id,)); self._event(connection,alarm_id,event_type,{"reason":reason,"user_id":user_id},now); return _record(connection.execute("SELECT * FROM alarm_instances WHERE alarm_id=?",(alarm_id,)).fetchone())
         return await self.repository.async_run(operation)
 
     async def async_mark_overdue(self, *, now: datetime) -> list[AlarmRecord]:

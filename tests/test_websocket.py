@@ -174,7 +174,7 @@ async def test_phase4_alarm_websocket_lifecycle_round_trip(tmp_path):
     rule_store = RuleStore(repository)
     alarm_store = AlarmLifecycleStore(repository)
     saved = await rule_store.async_save(base_rule(), EditorAccess("ha-admin", frozenset({"admin"})))
-    hass = SimpleNamespace(data={DOMAIN: {"rule_store": rule_store, "alarm_store": alarm_store}})
+    hass = SimpleNamespace(data={DOMAIN: {"rule_store": rule_store, "alarm_store": alarm_store}}, states=SimpleNamespace(get=lambda entity_id: SimpleNamespace(state="off")))
     connection = Connection()
     trigger = implementation(websocket_alarm_trigger)
     await trigger(hass, connection, {"id": 11, "request": {"rule_id": saved.rule_id, "entity_id": "binary_sensor.door", "friendly_name": "Tür", "priority": "warning", "current_state": "on"}})

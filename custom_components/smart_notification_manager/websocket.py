@@ -293,7 +293,7 @@ async def websocket_delivery_enqueue(hass: HomeAssistant, connection, msg: dict[
             payload=dict(value.get("payload", {})),
         )
         job = await DeliveryStore(_recipient_store(hass).repository).async_enqueue(
-            request, idempotency_key=msg["idempotency_key"], channel_id=msg["channel_id"]
+            request, idempotency_key=msg["idempotency_key"], channel_id=msg["channel_id"], alarm_id=value.get("alarm_id")
         )
         connection.send_result(msg["id"], {"job": _job_to_dict(job)})
     except (KeyError, TypeError, ValueError):
@@ -403,7 +403,12 @@ async def websocket_alarm_acknowledge_many(hass: HomeAssistant, connection, msg:
 @websocket_api.async_response
 async def websocket_alarm_resolve(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     try:
-        alarm = await _alarm_store(hass).async_resolve(msg["alarm_id"], now=datetime.now(UTC))
+        current = await _alarm_store(hass).async_get(msg["alarm_id"])
+        if current is None:
+            raise ValueError("alarm not found")
+        state = hass.states.get(current.entity_id) if getattr(hass, "states", None) is not None else None
+        actual_state = getattr(state, "state", None)
+        alarm = await _alarm_store(hass).async_resolve(msg["alarm_id"], now=datetime.now(UTC), actual_state=actual_state, expected_active_state=current.current_state, available=actual_state not in {None, "unknown", "unavailable"})
         connection.send_result(msg["id"], {"alarm": alarm_to_dict(alarm)})
     except (KeyError, TypeError, ValueError):
         connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Entwarnung ist für diesen Alarm nicht zulässig.")
@@ -454,6 +459,7 @@ def _alarm_store(hass: HomeAssistant) -> AlarmLifecycleStore:
 def _job_to_dict(job) -> dict[str, Any]:
     return {
         "attempt_id": job.attempt_id,
+        "alarm_id": job.alarm_id,
         "idempotency_key": job.idempotency_key,
         "recipient_id": job.recipient_id,
         "channel_id": job.channel_id,
