@@ -1,8 +1,13 @@
+from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
+from homeassistant.exceptions import HomeAssistantError
 from smart_notification_manager.core.metrics import MetricsCoordinator
 from smart_notification_manager.core.repository import SQLiteRepository
+from smart_notification_manager.core.rules import ConditionNode, Priority, RuleDefinition
+from smart_notification_manager.switch import RuleSwitch, async_sync_rule_switches
 
 
 @pytest.mark.asyncio
@@ -58,3 +63,75 @@ def test_phase7_fixture_documents_responsive_views_and_instances():
     assert 'data-view="list"' in source
     assert 'data-view="detail"' in source
     assert 'multi-instance' in source
+
+
+def _rule(rule_id="rule-1", *, version=1, enabled=True, priority=Priority.NORMAL, name="Regel"):
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    return RuleDefinition(
+        rule_id, name, "", None, None, "Sonstiges", priority, enabled,
+        (), ConditionNode("all", children=()), version, now, now,
+    )
+
+
+@pytest.mark.asyncio
+async def test_rule_switch_refresh_adds_updates_and_marks_deleted_rules():
+    class Store:
+        async def async_list(self):
+            return [_rule("new", name="Neue Regel")]
+
+    coordinator = SimpleNamespace(last_update_success=True)
+    old = RuleSwitch(Store(), coordinator, SimpleNamespace(entry_id="entry"), _rule("old"))
+    old.async_write_ha_state = lambda: None
+    entities = {"old": old}
+    added = []
+    await async_sync_rule_switches(Store(), coordinator, SimpleNamespace(entry_id="entry"), entities, added.extend)
+    assert old.available is False
+    assert len(added) == 1
+    assert added[0].unique_id == "entry_rule_new"
+
+
+@pytest.mark.asyncio
+async def test_rule_switch_reads_latest_version_before_saving():
+    current = _rule(version=4, name="Editor-Version")
+
+    class Store:
+        def __init__(self):
+            self.saved = None
+
+        async def async_get(self, rule_id):
+            return current
+
+        async def async_save(self, rule, access):
+            self.saved = rule
+            return rule
+
+    store = Store()
+    entity = RuleSwitch(store, object(), SimpleNamespace(entry_id="entry"), _rule(version=1, name="veraltet"))
+    entity.async_write_ha_state = lambda: None
+    await entity.async_turn_on()
+    assert store.saved.version == 5
+    assert store.saved.name == "Editor-Version"
+
+
+@pytest.mark.asyncio
+async def test_rule_switch_surfaces_version_conflict_and_protects_critical():
+    current = _rule(version=3)
+
+    class Store:
+        async def async_get(self, rule_id):
+            return current
+
+        async def async_save(self, rule, access):
+            raise ValueError("rule version conflict")
+
+    entity = RuleSwitch(Store(), object(), SimpleNamespace(entry_id="entry"), current)
+    entity.async_write_ha_state = lambda: None
+    with pytest.raises(HomeAssistantError, match="inzwischen geändert"):
+        await entity.async_turn_on()
+    class CriticalStore(Store):
+        async def async_get(self, rule_id):
+            return _rule(priority=Priority.CRITICAL)
+
+    critical = RuleSwitch(CriticalStore(), SimpleNamespace(last_update_success=True), SimpleNamespace(entry_id="entry"), _rule(priority=Priority.CRITICAL))
+    with pytest.raises(HomeAssistantError, match="Critical"):
+        await critical.async_turn_off()
