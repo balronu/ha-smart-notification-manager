@@ -25,6 +25,8 @@ class AlarmPolicy:
     escalation_stages: tuple[dict[str, Any], ...] = ()
     acknowledgement_mode: str = "any"
     required_recipient_ids: tuple[str, ...] = ()
+    category: str = "Sonstiges"
+    category_id: str | None = None
 
     def validate(self) -> None:
         for name in ("delay_seconds", "repeat_interval_seconds", "max_repeats", "max_duration_seconds"):
@@ -77,6 +79,8 @@ class AlarmRecord:
     rule_version: int | None = None
     acknowledgement_mode: str = "any"
     required_recipient_ids: tuple[str, ...] = ()
+    category: str = "Sonstiges"
+    category_id: str | None = None
 
 
 def _iso(value: datetime | None) -> str | None:
@@ -102,6 +106,8 @@ def _record(row) -> AlarmRecord:
         escalation_stages=tuple(json.loads(row["escalation_json"] or "[]")), parent_alarm_id=row["parent_alarm_id"],
         rule_version=row["rule_version"], acknowledgement_mode=row["acknowledgement_mode"],
         required_recipient_ids=tuple(json.loads(row["required_recipient_ids_json"] or "[]")),
+        category=row["category"] if "category" in row.keys() else "Sonstiges",  # noqa: SIM118
+        category_id=row["category_id"] if "category_id" in row.keys() else None,  # noqa: SIM118
     )
 
 
@@ -140,7 +146,8 @@ class AlarmLifecycleStore:
     async def async_trigger(self, *, rule_id: str, entity_id: str, friendly_name: str = "", area_id: str | None = None,
                             area_name: str | None = None, priority: str = "normal", previous_state: str | None = None,
                             current_state: str | None = None, now: datetime, policy: AlarmPolicy | None = None,
-                            parent_alarm_id: str | None = None, rule_version: int | None = None) -> tuple[AlarmRecord, bool]:
+                            parent_alarm_id: str | None = None, rule_version: int | None = None,
+                            category: str = "Sonstiges", category_id: str | None = None) -> tuple[AlarmRecord, bool]:
         ensure_aware(now); policy = policy or AlarmPolicy(); policy.validate()
         if not entity_id or not rule_id: raise ValueError("rule_id and entity_id are required")
         pending_until = now + timedelta(seconds=policy.delay_seconds) if policy.delay_seconds else None
@@ -151,7 +158,7 @@ class AlarmLifecycleStore:
             existing = connection.execute("SELECT * FROM alarm_instances WHERE rule_id=? AND cause_key=? AND alarm_state IN ('pending','active','overdue')", (rule_id, entity_id)).fetchone()
             if existing: return _record(existing), False
             alarm_id = new_id(); stamp = now.isoformat()
-            connection.execute("""INSERT INTO alarm_instances(alarm_id,rule_id,rule_version,cause_key,alarm_state,acknowledgement_state,acknowledgement_mode,required_recipient_ids_json,delivery_state,escalation_state,started_at,entity_id,friendly_name,area_id,area_name,priority,previous_state,current_state,pending_until,updated_at,repeat_interval_seconds,max_repeats,next_repeat_at,repeat_only_unacknowledged,max_duration_seconds,escalation_json,parent_alarm_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (alarm_id,rule_id,rule_version,entity_id,state,"unacknowledged",policy.acknowledgement_mode,json.dumps(sorted(set(policy.required_recipient_ids))),"pending","running" if policy.escalation_stages else "idle",stamp,entity_id,friendly_name,area_id,area_name,priority,previous_state,current_state,_iso(pending_until),stamp,policy.repeat_interval_seconds,policy.max_repeats,_iso(next_repeat),int(policy.repeat_only_unacknowledged),policy.max_duration_seconds,json.dumps(policy.escalation_stages, ensure_ascii=False),parent_alarm_id))
+            connection.execute("""INSERT INTO alarm_instances(alarm_id,rule_id,rule_version,cause_key,alarm_state,acknowledgement_state,acknowledgement_mode,required_recipient_ids_json,delivery_state,escalation_state,started_at,entity_id,friendly_name,area_id,area_name,priority,previous_state,current_state,pending_until,updated_at,repeat_interval_seconds,max_repeats,next_repeat_at,repeat_only_unacknowledged,max_duration_seconds,escalation_json,parent_alarm_id,category,category_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (alarm_id,rule_id,rule_version,entity_id,state,"unacknowledged",policy.acknowledgement_mode,json.dumps(sorted(set(policy.required_recipient_ids))),"pending","running" if policy.escalation_stages else "idle",stamp,entity_id,friendly_name,area_id,area_name,priority,previous_state,current_state,_iso(pending_until),stamp,policy.repeat_interval_seconds,policy.max_repeats,_iso(next_repeat),int(policy.repeat_only_unacknowledged),policy.max_duration_seconds,json.dumps(policy.escalation_stages, ensure_ascii=False),parent_alarm_id,category.strip() or "Sonstiges",category_id))
             self._event(connection, alarm_id, "triggered", {"entity_id": entity_id, "state": state}, now)
             return _record(connection.execute("SELECT * FROM alarm_instances WHERE alarm_id=?", (alarm_id,)).fetchone()), True
         return await self.repository.async_run(operation)

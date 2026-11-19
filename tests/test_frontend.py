@@ -26,6 +26,10 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert "smart_notification_manager/alarm/resolve" in source
     assert "smart_notification_manager/alarm/close" in source
     assert "smart_notification_manager/alarm/acknowledge_many" in source
+    assert "smart-notification-phase6-alarm-center" in source
+    assert "smart_notification_manager/alarm_center/list" in source
+    assert "smart_notification_manager/alarm_center/detail" in source
+    assert "Alarmzentrale" in source
     assert "smart-notification-phase5-policy-manager" in source
     assert "smart_notification_manager/policy/quiet/save" in source
     assert "smart_notification_manager/policy/pause/save" in source
@@ -38,4 +42,5 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert (FRONTEND.parent / "phase-3-fixture.html").exists()
     assert (FRONTEND.parent / "phase-3-live-fixture.html").exists()
     assert (FRONTEND.parent / "phase-4-alarm-fixture.html").exists()
+    assert (FRONTEND.parent / "phase-6-alarm-center-fixture.html").exists()
     assert (FRONTEND.parent / "phase-5-policy-fixture.html").exists()

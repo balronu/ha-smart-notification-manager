@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Entwicklungsstatus:** Phase 5 von 12 ist in `main` integriert. Die Policy-Schicht für Ruhezeiten, Pausen, Rate-Limits, Abhängigkeiten und Beobachtungsmodus ist abgeschlossen. Die automatische Zustellung von Alarmwiederholungen und Eskalationen ist noch offen ([Issue #24](https://github.com/balronu/ha-smart-notification-manager/issues/24)); die authentifizierte HA-Runtime-/Panel-E2E-Prüfung sowie Qualitäts-Gates #16–#19 bleiben Beta-Blocker.
+> **Entwicklungsstatus:** Phase 6 von 12 wird auf `feature/phase-6-alarm-center` entwickelt. Die Alarmzentrale ist implementiert, aber noch nicht gemergt. Issue #24, die authentifizierte HA-Runtime-/Panel-E2E-Prüfung und Qualitäts-Gates #16–#19 bleiben vor der Beta offen.
 
 ## Ziel
 
@@ -29,6 +29,7 @@ Die Datenbank wird nicht automatisch in einer produktiven HA-Instanz angelegt. D
 - [Testplan](docs/TEST_PLAN.md)
 - [Release-Policy](docs/RELEASE_POLICY.md)
 - [Phase 5 – Benachrichtigungspolitiken](docs/PHASE5_NOTIFICATION_POLICIES.md)
+- [Phase 6 – Alarmzentrale](docs/PHASE6_ALARM_CENTER.md)
 
 ## Phase-2-Ergebnis
 

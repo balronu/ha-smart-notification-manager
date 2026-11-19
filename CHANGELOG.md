@@ -1,5 +1,16 @@
 # Changelog
 
+## Unveröffentlicht – Phase 6 in Entwicklung
+
+- Zentrale Alarmübersicht mit serverseitiger Suche, Filtern, Sortierung,
+  Gruppierung und Pagination.
+- Historische Alarmkategorien, persönliche Filteransichten und Timeline-
+  Details in Schema-v7; bestehende Alarm-IDs bleiben erhalten.
+- Rollenbasis für Administrator, Quittierungsberechtigte und Nur-Lesen.
+- Responsive deutsche Panel-Komponente für Desktop, iPad und iPhone.
+- HA-Runtime-/Panel-E2E sowie Gates #16–#19 bleiben offen; kein Release und
+  kein Tag.
+
 ## Unveröffentlicht – Phase 5 abgeschlossen
 
 - Policy-Schicht für Ruhezeiten, Pausen, Rate-Limits, Regelabhängigkeiten und Beobachtungsmodus.

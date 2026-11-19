@@ -28,6 +28,13 @@ Phase 3 registriert zusätzlich die Admin-WebSocket-Befehle
 ausschließlich vorhandene Home-Assistant-Dienste und benötigen zusätzlich eine
 explizite Versandfreigabe; ein Anbieter-Accept ist keine Zustellbestätigung.
 
+Phase 6 ergänzt `alarm_center/list` und `alarm_center/detail` für serverseitige
+Alarmabfragen sowie `alarm_category/*`, `alarm_filter/*` und `alarm_role/save`.
+Die Listenabfrage unterstützt allowlist-basierte Sortierung, Pagination,
+Suche, kombinierbare Filter und Gruppenzähler. Kategorien und Rollen sind
+admin-geschützt; persönliche Filter werden ausschließlich nach der
+authentifizierten HA-Benutzer-ID geladen oder geändert.
+
 ## WebSocket-Fehlervertrag
 
 Ungültige Regelpayloads und Versionskonflikte werden als `invalid_format` mit
