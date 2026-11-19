@@ -24,6 +24,7 @@ from .core.entity_catalog import list_entity_snapshots
 from .core.policies import Pause, PolicyStore, QuietHours, RateLimitPolicy, RuleDependency
 from .core.recipient_store import RecipientStore
 from .core.recipients import Recipient, RecipientDevice, RecipientGroup
+from .core.repeat_delivery import RepeatEscalationDeliveryPlanner
 from .core.revalidation import revalidate_alarm
 from .core.rule_store import EditorAccess, RuleStore, rule_from_editor_payload, rule_to_dict
 from .core.rule_templates import RuleTemplateStore
@@ -70,7 +71,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, websocket_save)
     websocket_api.async_register_command(hass, websocket_delete)
     websocket_api.async_register_command(hass, websocket_duplicate)
-    for handler in (websocket_recipient_list, websocket_recipient_save, websocket_recipient_delete, websocket_group_save, websocket_channel_save, websocket_channel_group_save, websocket_channel_group_delete, websocket_template_save, websocket_template_delete, websocket_routing_preview, websocket_rule_routing_save, websocket_delivery_enqueue, websocket_delivery_list, websocket_alarm_list, websocket_alarm_trigger, websocket_alarm_events, websocket_alarm_acknowledge, websocket_alarm_acknowledge_many, websocket_alarm_resolve, websocket_alarm_close, websocket_alarm_center_list, websocket_alarm_center_detail, websocket_alarm_category_list, websocket_alarm_category_save, websocket_alarm_category_deactivate, websocket_alarm_filter_list, websocket_alarm_filter_save, websocket_alarm_filter_delete, websocket_alarm_role_save, websocket_policy_list, websocket_policy_quiet_save, websocket_policy_pause_save, websocket_policy_pause_resume, websocket_policy_rate_limit_save, websocket_policy_dependency_save, websocket_policy_observation_save, websocket_policy_evaluate, websocket_phase8_template_list, websocket_phase8_template_save, websocket_phase8_template_delete, websocket_phase8_template_export, websocket_phase8_template_import, websocket_phase8_simulate, websocket_phase10_observe, websocket_phase8_versions, websocket_phase8_restore, websocket_phase9_discover, websocket_phase9_preview, websocket_phase9_prepare, websocket_phase9_activate, websocket_phase9_rollback, websocket_phase9_reference, websocket_phase11_export, websocket_phase11_import, websocket_phase11_backup, websocket_phase11_restore, websocket_phase11_recovery):
+    for handler in (websocket_recipient_list, websocket_recipient_save, websocket_recipient_delete, websocket_group_save, websocket_channel_save, websocket_channel_group_save, websocket_channel_group_delete, websocket_template_save, websocket_template_delete, websocket_routing_preview, websocket_rule_routing_save, websocket_delivery_enqueue, websocket_delivery_list, websocket_alarm_list, websocket_alarm_trigger, websocket_alarm_process_due, websocket_alarm_events, websocket_alarm_acknowledge, websocket_alarm_acknowledge_many, websocket_alarm_resolve, websocket_alarm_close, websocket_alarm_center_list, websocket_alarm_center_detail, websocket_alarm_category_list, websocket_alarm_category_save, websocket_alarm_category_deactivate, websocket_alarm_filter_list, websocket_alarm_filter_save, websocket_alarm_filter_delete, websocket_alarm_role_save, websocket_policy_list, websocket_policy_quiet_save, websocket_policy_pause_save, websocket_policy_pause_resume, websocket_policy_rate_limit_save, websocket_policy_dependency_save, websocket_policy_observation_save, websocket_policy_evaluate, websocket_phase8_template_list, websocket_phase8_template_save, websocket_phase8_template_delete, websocket_phase8_template_export, websocket_phase8_template_import, websocket_phase8_simulate, websocket_phase10_observe, websocket_phase8_versions, websocket_phase8_restore, websocket_phase9_discover, websocket_phase9_preview, websocket_phase9_prepare, websocket_phase9_activate, websocket_phase9_rollback, websocket_phase9_reference, websocket_phase11_export, websocket_phase11_import, websocket_phase11_backup, websocket_phase11_restore, websocket_phase11_recovery):
         websocket_api.async_register_command(hass, handler)
     hass.data[DOMAIN]["websocket_registered"] = True
 
@@ -414,6 +415,8 @@ async def websocket_alarm_trigger(hass: HomeAssistant, connection, msg: dict[str
             escalation_stages=tuple(value.get("escalation_stages", ())),
             acknowledgement_mode=str(value.get("acknowledgement_mode", "any")),
             required_recipient_ids=tuple(str(item) for item in value.get("required_recipient_ids", ())),
+            repeat_recipient_ids=tuple(str(item) for item in value.get("repeat_recipient_ids", ())),
+            repeat_channel_ids=tuple(str(item) for item in value.get("repeat_channel_ids", ())),
         )
         alarm, created = await _alarm_store(hass).async_trigger(
             rule_id=value["rule_id"], entity_id=value["entity_id"], friendly_name=str(value.get("friendly_name", "")),
@@ -424,6 +427,23 @@ async def websocket_alarm_trigger(hass: HomeAssistant, connection, msg: dict[str
         connection.send_result(msg["id"], {"alarm": alarm_to_dict(alarm), "created": created})
     except (KeyError, TypeError, ValueError, PermissionError):
         connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Der Alarm kann nicht angelegt werden.")
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_alarm_storage_error(connection, msg, err)
+
+
+@_require_alarm_role("admin")
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/alarm/process_due"})
+@websocket_api.async_response
+async def websocket_alarm_process_due(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """Plan due repeats/escalations without invoking a delivery adapter."""
+
+    try:
+        value = msg.get("now")
+        now = datetime.fromisoformat(value) if value else datetime.now(UTC)
+        result = await _repeat_delivery_planner(hass).async_plan_due(now=now)
+        connection.send_result(msg["id"], result)
+    except (TypeError, ValueError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Der Zeitpunkt für die Alarmplanung ist ungültig.")
     except (RuntimeError, sqlite3.Error) as err:
         _send_alarm_storage_error(connection, msg, err)
 
@@ -1076,6 +1096,13 @@ def _alarm_store(hass: HomeAssistant) -> AlarmLifecycleStore:
     if store is None:
         raise RuntimeError("Smart Notification Manager is not configured")
     return store
+
+
+def _repeat_delivery_planner(hass: HomeAssistant) -> RepeatEscalationDeliveryPlanner:
+    planner = hass.data.get(DOMAIN, {}).get("repeat_delivery_planner")
+    if planner is None:
+        raise RuntimeError("Smart Notification Manager is not configured")
+    return planner
 
 
 def _alarm_center_store(hass: HomeAssistant) -> AlarmCenterStore:

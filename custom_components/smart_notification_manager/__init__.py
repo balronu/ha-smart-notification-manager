@@ -20,6 +20,7 @@ from .core.delivery_store import DeliveryStore
 from .core.metrics import async_get_coordinator
 from .core.policies import PolicyStore
 from .core.recipient_store import RecipientStore
+from .core.repeat_delivery import RepeatEscalationDeliveryPlanner
 from .core.repository import SQLiteRepository
 from .core.rule_store import RuleStore
 from .core.rule_templates import RuleTemplateStore
@@ -58,6 +59,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     runtime["automation_migration_store"] = AutomationMigrationStore(repository)
     runtime["policy_store"] = PolicyStore(repository)
     runtime["delivery_service"] = DeliveryService(runtime["delivery_store"], runtime["policy_store"])
+    runtime["repeat_delivery_planner"] = RepeatEscalationDeliveryPlanner(
+        runtime["alarm_store"], runtime["delivery_store"], runtime["policy_store"]
+    )
     if hasattr(hass, "config_entries") and hasattr(hass.config_entries, "async_forward_entry_setups"):
         runtime["metrics_coordinator"] = await async_get_coordinator(hass, repository)
         await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "binary_sensor", "switch"])
@@ -100,6 +104,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     runtime.pop("recipient_store", None)
     runtime.pop("delivery_store", None)
     runtime.pop("delivery_service", None)
+    runtime.pop("repeat_delivery_planner", None)
     runtime.pop("alarm_store", None)
     runtime.pop("alarm_center_store", None)
     runtime.pop("automation_migration_store", None)

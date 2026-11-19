@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 
-CURRENT_SCHEMA_VERSION = 10
+CURRENT_SCHEMA_VERSION = 11
 
 
 def apply_migrations(connection: sqlite3.Connection) -> None:
@@ -46,6 +46,8 @@ def apply_migrations(connection: sqlite3.Connection) -> None:
                 _migration_v9(connection)
             elif next_version == 10:
                 _migration_v10(connection)
+            elif next_version == 11:
+                _migration_v11(connection)
             else:  # pragma: no cover - guarded by CURRENT_SCHEMA_VERSION
                 raise RuntimeError(f"missing migration {next_version}")
             connection.execute(f"PRAGMA user_version = {next_version}")
@@ -506,6 +508,18 @@ def _migration_v10(connection: sqlite3.Connection) -> None:
         );
         CREATE INDEX IF NOT EXISTS ix_migration_backups_plan
             ON migration_backups(plan_id, created_at);
+        """,
+    )
+
+
+def _migration_v11(connection: sqlite3.Connection) -> None:
+    """Persist repeat/escalation routing for restart-safe delivery planning."""
+
+    _execute_sql_statements(
+        connection,
+        """
+        ALTER TABLE alarm_instances ADD COLUMN repeat_recipient_ids_json TEXT NOT NULL DEFAULT '[]';
+        ALTER TABLE alarm_instances ADD COLUMN repeat_channel_ids_json TEXT NOT NULL DEFAULT '[]';
         """,
     )
 

@@ -12,9 +12,11 @@ Die verbindlichen Gate-Prüfungen werden nicht durch lokale Fixtures ersetzt.
   privaten Repository-Sichtbarkeit nicht ausführbar; das Gate bleibt offen.
 - **#19 Secret-Scan:** `detect-secrets` prüft den aktuellen Baum und ein
   Dummy-Sentinel; zusätzlich wurde die Git-Historie mit 358 Blobs geprüft.
-- **#24 Wiederholung/Eskalation:** bleibt offen, bis der zentrale Policy-/
-  Delivery-Pfad mit simulierten Adaptern, Neustart und paralleler Verarbeitung
-  vollständig nachgewiesen ist.
+- **#24 Wiederholung/Eskalation:** wird über den zentralen, policy-geprüften
+  Delivery-Planer mit simulierten Adaptern, Neustart und paralleler Verarbeitung
+  nachgewiesen. Die Übergabe erzeugt nur idempotente Delivery-Jobs; ein Adapter
+  wird dabei nicht aufgerufen. Das Gate bleibt bis zum abgeschlossenen PR und
+  Main-CI-Lauf offen.
 
 Kein Gate autorisiert eine produktive Installation, Benachrichtigung, Release
 oder Tag. Die öffentliche Beta bleibt bis zum Abschluss aller zwölf Phasen

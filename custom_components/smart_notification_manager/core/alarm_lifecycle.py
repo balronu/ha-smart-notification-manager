@@ -27,6 +27,8 @@ class AlarmPolicy:
     required_recipient_ids: tuple[str, ...] = ()
     category: str = "Sonstiges"
     category_id: str | None = None
+    repeat_recipient_ids: tuple[str, ...] = ()
+    repeat_channel_ids: tuple[str, ...] = ()
 
     def validate(self) -> None:
         for name in ("delay_seconds", "repeat_interval_seconds", "max_repeats", "max_duration_seconds"):
@@ -81,6 +83,8 @@ class AlarmRecord:
     required_recipient_ids: tuple[str, ...] = ()
     category: str = "Sonstiges"
     category_id: str | None = None
+    repeat_recipient_ids: tuple[str, ...] = ()
+    repeat_channel_ids: tuple[str, ...] = ()
 
 
 def _iso(value: datetime | None) -> str | None:
@@ -108,6 +112,8 @@ def _record(row) -> AlarmRecord:
         required_recipient_ids=tuple(json.loads(row["required_recipient_ids_json"] or "[]")),
         category=row["category"] if "category" in row.keys() else "Sonstiges",  # noqa: SIM118
         category_id=row["category_id"] if "category_id" in row.keys() else None,  # noqa: SIM118
+        repeat_recipient_ids=tuple(json.loads(row["repeat_recipient_ids_json"] or "[]")) if "repeat_recipient_ids_json" in row.keys() else (),  # noqa: SIM118
+        repeat_channel_ids=tuple(json.loads(row["repeat_channel_ids_json"] or "[]")) if "repeat_channel_ids_json" in row.keys() else (),  # noqa: SIM118
     )
 
 
@@ -158,7 +164,7 @@ class AlarmLifecycleStore:
             existing = connection.execute("SELECT * FROM alarm_instances WHERE rule_id=? AND cause_key=? AND alarm_state IN ('pending','active','overdue')", (rule_id, entity_id)).fetchone()
             if existing: return _record(existing), False
             alarm_id = new_id(); stamp = now.isoformat()
-            connection.execute("""INSERT INTO alarm_instances(alarm_id,rule_id,rule_version,cause_key,alarm_state,acknowledgement_state,acknowledgement_mode,required_recipient_ids_json,delivery_state,escalation_state,started_at,entity_id,friendly_name,area_id,area_name,priority,previous_state,current_state,pending_until,updated_at,repeat_interval_seconds,max_repeats,next_repeat_at,repeat_only_unacknowledged,max_duration_seconds,escalation_json,parent_alarm_id,category,category_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (alarm_id,rule_id,rule_version,entity_id,state,"unacknowledged",policy.acknowledgement_mode,json.dumps(sorted(set(policy.required_recipient_ids))),"pending","running" if policy.escalation_stages else "idle",stamp,entity_id,friendly_name,area_id,area_name,priority,previous_state,current_state,_iso(pending_until),stamp,policy.repeat_interval_seconds,policy.max_repeats,_iso(next_repeat),int(policy.repeat_only_unacknowledged),policy.max_duration_seconds,json.dumps(policy.escalation_stages, ensure_ascii=False),parent_alarm_id,category.strip() or "Sonstiges",category_id))
+            connection.execute("""INSERT INTO alarm_instances(alarm_id,rule_id,rule_version,cause_key,alarm_state,acknowledgement_state,acknowledgement_mode,required_recipient_ids_json,delivery_state,escalation_state,started_at,entity_id,friendly_name,area_id,area_name,priority,previous_state,current_state,pending_until,updated_at,repeat_interval_seconds,max_repeats,next_repeat_at,repeat_only_unacknowledged,max_duration_seconds,escalation_json,parent_alarm_id,category,category_id,repeat_recipient_ids_json,repeat_channel_ids_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (alarm_id,rule_id,rule_version,entity_id,state,"unacknowledged",policy.acknowledgement_mode,json.dumps(sorted(set(policy.required_recipient_ids))),"pending","running" if policy.escalation_stages else "idle",stamp,entity_id,friendly_name,area_id,area_name,priority,previous_state,current_state,_iso(pending_until),stamp,policy.repeat_interval_seconds,policy.max_repeats,_iso(next_repeat),int(policy.repeat_only_unacknowledged),policy.max_duration_seconds,json.dumps(policy.escalation_stages, ensure_ascii=False),parent_alarm_id,category.strip() or "Sonstiges",category_id,json.dumps(sorted(set(policy.repeat_recipient_ids))),json.dumps(sorted(set(policy.repeat_channel_ids)))))
             self._event(connection, alarm_id, "triggered", {"entity_id": entity_id, "state": state}, now)
             return _record(connection.execute("SELECT * FROM alarm_instances WHERE alarm_id=?", (alarm_id,)).fetchone()), True
         return await self.repository.async_run(operation)
