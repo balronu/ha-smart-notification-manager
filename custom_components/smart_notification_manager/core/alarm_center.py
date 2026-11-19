@@ -114,12 +114,15 @@ class AlarmCenterStore:
             raise ValueError("Filtername und Filterdefinition sind erforderlich")
         filter_id = str(value.get("filter_id") or new_id()); stamp = now.isoformat()
         def operation(c):
-            old = c.execute("SELECT created_at FROM saved_alarm_filters WHERE filter_id=? AND user_id=?", (filter_id, user_id)).fetchone()
+            existing = c.execute("SELECT user_id,created_at FROM saved_alarm_filters WHERE filter_id=?", (filter_id,)).fetchone()
+            if existing is not None and existing["user_id"] != user_id:
+                raise PermissionError("Die persönliche Filteransicht gehört einem anderen Benutzer.")
+            old = existing
             if bool(value.get("is_default")):
                 c.execute("UPDATE saved_alarm_filters SET is_default=0 WHERE user_id=?", (user_id,))
             c.execute("INSERT INTO saved_alarm_filters(filter_id,user_id,name,definition_json,is_default,created_at,updated_at) VALUES (?,?,?,?,?,?,?) "
                       "ON CONFLICT(filter_id) DO UPDATE SET name=excluded.name,definition_json=excluded.definition_json,is_default=excluded.is_default,updated_at=excluded.updated_at",
-                      (filter_id, user_id, name, json.dumps(value["definition"], ensure_ascii=False), int(bool(value.get("is_default"))), old[0] if old else stamp, stamp))
+                      (filter_id, user_id, name, json.dumps(value["definition"], ensure_ascii=False), int(bool(value.get("is_default"))), old["created_at"] if old else stamp, stamp))
             return self._filter_dict(c.execute("SELECT * FROM saved_alarm_filters WHERE filter_id=? AND user_id=?", (filter_id, user_id)).fetchone())
         return await self.repository.async_run(operation)
 
@@ -145,14 +148,10 @@ class AlarmCenterStore:
             if filters.get("critical_only"): query += " AND priority='critical'"
             if filters.get("date_from"): query += " AND started_at>=?"; args.append(filters["date_from"])
             if filters.get("date_to"): query += " AND started_at<=?"; args.append(filters["date_to"])
-            rows = c.execute(query + " ORDER BY " + SORTS.get(sort, SORTS["newest"]), args).fetchall()
             if role != "admin" or filters.get("own_only"):
-                visible = []
-                for row in rows:
-                    required = set(json.loads(row["required_recipient_ids_json"] or "[]"))
-                    if role == "admin" or user_id in required:
-                        visible.append(row)
-                rows = visible
+                query += " AND EXISTS (SELECT 1 FROM json_each(alarm_instances.required_recipient_ids_json) WHERE json_each.value=?)"
+                args.append(user_id)
+            rows = c.execute(query + " ORDER BY " + SORTS.get(sort, SORTS["newest"]), args).fetchall()
             total = len(rows); start = (page - 1) * page_size; selected = rows[start:start + page_size]
             alarms = [alarm_to_dict(_record(row)) for row in selected]
             for item in alarms:

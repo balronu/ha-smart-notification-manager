@@ -62,12 +62,12 @@ Viewport- und Bedienabläufe erhalten.
 
 ## Berechtigungen
 
-`can_access()` ist nur ein internes Modellprüfwerkzeug. Der aktuelle
-WebSocket-Adapter bindet Schreib- und Lesebefehle zusätzlich mit
-`@require_admin` an den authentifizierten HA-Benutzer; die Verbindung muss eine
-Benutzer-ID besitzen. Eine feinere Rollen- und Benutzerrechteverwaltung ist
-weiterhin offen. Unprotected administrative or user-specific actions remain
-disabled.
+`can_access()` ist nur ein internes Modellprüfwerkzeug. Die Alarm-Endpunkte
+verwenden zusätzlich eine serverseitige Rollenprüfung für den authentifizierten
+HA-Benutzer: `admin`, `acknowledger` oder `read_only`. Kategorien, Rollen,
+Auslösung, Delivery-Enqueue sowie manuelles Abschließen und Entwarnen bleiben
+admin-geschützt; Quittierungen benötigen mindestens `acknowledger`. Alte
+Alarmbefehle verwenden dieselbe Prüfung und dürfen sie nicht umgehen.
 
 ## Lifecycle
 
