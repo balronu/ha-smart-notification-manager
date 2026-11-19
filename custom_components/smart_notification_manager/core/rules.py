@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import datetime, time
 from enum import StrEnum
 from typing import Any
 
@@ -134,7 +135,7 @@ def validate_rule(rule: RuleDefinition) -> None:
 def _validate_trigger(trigger: TriggerDefinition) -> None:
     if not trigger.entity_ids:
         raise ValueError("trigger needs at least one entity")
-    if any(not entity_id.startswith(("binary_sensor.", "input_", "sensor.", "switch.", "device_tracker.")) for entity_id in trigger.entity_ids):
+    if any(not _valid_entity_id(entity_id) for entity_id in trigger.entity_ids):
         raise ValueError("trigger contains an invalid entity id")
     if trigger.minimum_duration_seconds < 0 or trigger.delay_seconds < 0:
         raise ValueError("durations must not be negative")
@@ -143,10 +144,17 @@ def _validate_trigger(trigger: TriggerDefinition) -> None:
     if trigger.kind is TriggerKind.NUMERIC:
         if trigger.comparison is None or trigger.threshold is None:
             raise ValueError("numeric trigger needs a comparison and threshold")
+        _finite(trigger.threshold, "numeric threshold")
         if trigger.comparison is Comparison.BETWEEN and trigger.upper_threshold is None:
             raise ValueError("between trigger needs an upper threshold")
+        if trigger.upper_threshold is not None:
+            _finite(trigger.upper_threshold, "upper threshold")
+        if trigger.comparison is Comparison.BETWEEN and trigger.upper_threshold < trigger.threshold:
+            raise ValueError("between trigger upper threshold must not be lower than threshold")
         if trigger.hysteresis is not None and trigger.hysteresis < 0:
             raise ValueError("hysteresis must not be negative")
+        if trigger.hysteresis is not None:
+            _finite(trigger.hysteresis, "hysteresis")
 
 
 def validate_condition(node: ConditionNode) -> None:
@@ -161,26 +169,56 @@ def validate_condition(node: ConditionNode) -> None:
     if node.kind == "entity_state":
         if not isinstance(node.value, dict) or not node.value.get("entity_id"):
             raise ValueError("entity state condition needs an entity")
+        if not _valid_entity_id(node.value["entity_id"]):
+            raise ValueError("condition contains an invalid entity id")
         return
     if node.kind == "numeric":
         if not isinstance(node.value, dict) or not node.value.get("entity_id"):
             raise ValueError("numeric condition needs an entity")
         if node.value.get("comparison") not in {item.value for item in Comparison}:
             raise ValueError("numeric condition has an invalid comparison")
+        _finite(node.value.get("threshold"), "numeric condition threshold")
+        if node.value.get("comparison") == Comparison.BETWEEN.value:
+            _finite(node.value.get("upper_threshold"), "numeric condition upper threshold")
+            if node.value["upper_threshold"] < node.value["threshold"]:
+                raise ValueError("numeric condition upper threshold must not be lower than threshold")
         return
     if node.kind == "presence":
         if not isinstance(node.value, dict) or not node.value.get("entity_id"):
             raise ValueError("presence condition needs an entity")
+        if not _valid_entity_id(node.value["entity_id"]):
+            raise ValueError("condition contains an invalid entity id")
         return
     if node.kind == "weekday":
         if not isinstance(node.value, dict) or not node.value.get("days"):
             raise ValueError("weekday condition needs a day")
+        if any(not isinstance(day, int) or day not in range(7) for day in node.value["days"]):
+            raise ValueError("weekday condition contains an invalid day")
         return
     if node.kind == "time_window":
         if not isinstance(node.value, dict) or not node.value.get("start") or not node.value.get("end"):
             raise ValueError("time window needs start and end")
+        try:
+            time.fromisoformat(node.value["start"])
+            time.fromisoformat(node.value["end"])
+        except (TypeError, ValueError) as err:
+            raise ValueError("time window contains an invalid time") from err
         return
     raise ValueError(f"unknown condition kind: {node.kind}")
+
+
+def _valid_entity_id(value: Any) -> bool:
+    return isinstance(value, str) and value.count(".") == 1 and all(value.split("."))
+
+
+def _finite(value: Any, label: str) -> None:
+    try:
+        if not math.isfinite(float(value)):
+            raise ValueError(f"{label} must be finite")
+    except (TypeError, ValueError) as err:
+        if isinstance(err, ValueError) and str(err) == f"{label} must be finite":
+            raise
+        raise ValueError(f"{label} must be a number") from err
 
 
 def condition_to_dict(node: ConditionNode) -> dict[str, Any]:

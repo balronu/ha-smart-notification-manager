@@ -123,12 +123,18 @@ async def test_rule_store_versions_permissions_and_soft_delete(tmp_path: Path):
     assert saved.rule_id == rule.rule_id
     assert (await store.async_get(rule.rule_id)).priority is Priority.WARNING
 
+    updated = replace(rule, name="Tür offen – geändert", version=2, updated_at=rule.updated_at)
+    assert (await store.async_save(updated, access)).version == 2
+    with pytest.raises(ValueError, match="version conflict"):
+        await store.async_save(replace(updated, name="veraltete Änderung"), access)
+    assert (await store.async_get(rule.rule_id)).name == updated.name
+
     with pytest.raises(PermissionError):
         await store.async_save(rule, EditorAccess(None, frozenset({"edit"})))
 
     with pytest.raises(ValueError, match="name"):
         await store.async_save(replace(rule, name=""), access)
-    assert (await store.async_get(rule.rule_id)).name == rule.name
+    assert (await store.async_get(rule.rule_id)).name == updated.name
 
     duplicate = await store.async_duplicate(rule, now=rule.updated_at, access=access)
     assert duplicate.rule_id != rule.rule_id

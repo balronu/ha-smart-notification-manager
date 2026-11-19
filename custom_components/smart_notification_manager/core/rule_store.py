@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from .models import ensure_aware, new_id
@@ -75,6 +75,15 @@ class RuleStore:
 
         def operation(connection):
             now = rule.updated_at.isoformat()
+            current = connection.execute(
+                "SELECT MAX(version) FROM rule_versions WHERE rule_id = ?",
+                (rule.rule_id,),
+            ).fetchone()[0]
+            expected_version = 1 if current is None else int(current) + 1
+            if rule.version != expected_version:
+                raise ValueError(
+                    f"rule version conflict: expected {expected_version}, received {rule.version}"
+                )
             connection.execute(
                 """
                 INSERT INTO rules(rule_id, name, category, enabled, created_at, updated_at,
@@ -160,6 +169,35 @@ def _rule_to_dict(rule: RuleDefinition) -> dict[str, Any]:
         "created_at": rule.created_at.isoformat(),
         "updated_at": rule.updated_at.isoformat(),
     }
+
+
+def rule_to_dict(rule: RuleDefinition) -> dict[str, Any]:
+    """Return the stable JSON contract used by the HA WebSocket API."""
+
+    return _rule_to_dict(rule)
+
+
+def rule_from_editor_payload(value: dict[str, Any], *, now: datetime | None = None) -> RuleDefinition:
+    """Normalize a frontend payload before validation and optimistic save."""
+
+    timestamp = now or datetime.now(UTC)
+    rule_id = value.get("rule_id") or new_id()
+    created_at = datetime.fromisoformat(value["created_at"]) if value.get("created_at") else timestamp
+    return _rule_from_dict(
+        {
+            **value,
+            "rule_id": rule_id,
+            "version": int(value.get("version", 1)),
+            "created_at": created_at.isoformat(),
+            "updated_at": (datetime.fromisoformat(value["updated_at"]) if value.get("updated_at") else timestamp).isoformat(),
+            "description": value.get("description", ""),
+            "category": value.get("category") or "Sonstiges",
+            "priority": value.get("priority", Priority.NORMAL.value),
+            "enabled": bool(value.get("enabled", True)),
+            "triggers": value.get("triggers", []),
+            "conditions": value.get("conditions", {"kind": "all", "children": []}),
+        }
+    )
 
 
 def _trigger_to_dict(trigger: TriggerDefinition) -> dict[str, Any]:

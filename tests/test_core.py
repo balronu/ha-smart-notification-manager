@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import UTC, datetime, time
 
 import pytest
@@ -17,7 +18,14 @@ from smart_notification_manager.core.models import (
 )
 from smart_notification_manager.core.permissions import Permission, can_access
 from smart_notification_manager.core.router import deduplicate_recipients
-from smart_notification_manager.core.rules import Comparison, ConditionNode
+from smart_notification_manager.core.rules import (
+    Comparison,
+    ConditionNode,
+    TriggerDefinition,
+    TriggerKind,
+    validate_condition,
+    validate_rule,
+)
 
 
 def test_ids_are_opaque_uuid_values():
@@ -84,6 +92,7 @@ def test_condition_unknown_values_do_not_match():
     context = EvaluationContext(states={"sensor.x": "unknown"}, numeric_states={}, presence={}, now=datetime.now(UTC))
     assert not evaluate_condition(condition, context)
     assert not evaluate_state_trigger("unknown", "on", from_state=None, to_state="on")
+    assert evaluate_state_trigger("on", "unknown", from_state="on", to_state="unknown", unknown_policy="match")
 
 
 def test_numeric_comparison_between():
@@ -95,3 +104,22 @@ def test_numeric_comparison_between():
 def test_numeric_trigger_hysteresis_and_minimum_duration():
     assert not evaluate_numeric_trigger(11, "gt", 10, elapsed_seconds=2, minimum_duration_seconds=5)
     assert evaluate_numeric_trigger(9.5, "gt", 10, previous_match=True, hysteresis=1, elapsed_seconds=5)
+
+
+def test_numeric_range_hysteresis():
+    assert evaluate_numeric_trigger(9.5, "between", 10, upper_threshold=20, previous_match=True, hysteresis=1)
+    assert not evaluate_numeric_trigger(8.8, "between", 10, upper_threshold=20, previous_match=True, hysteresis=1)
+
+
+def test_validation_rejects_nonfinite_and_invalid_ranges():
+    base = ConditionNode("all", children=(ConditionNode("entity_state", {"entity_id": "binary_sensor.door", "state": "on"}),))
+    from smart_notification_manager.core.rules import Priority, RuleDefinition
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    rule = RuleDefinition(new_id(), "Test", "", None, None, "Test", Priority.NORMAL, True, (), base, 1, now, now)
+    rule = replace(rule, triggers=(TriggerDefinition(TriggerKind.STATE, ("sensor.x",), to_state="on"),))
+    with pytest.raises(ValueError, match="finite"):
+        validate_rule(replace(rule, triggers=(TriggerDefinition(TriggerKind.NUMERIC, ("sensor.x",), comparison=Comparison.BETWEEN, threshold=float("nan"), upper_threshold=2),)))
+    with pytest.raises(ValueError, match="upper threshold"):
+        validate_rule(replace(rule, triggers=(TriggerDefinition(TriggerKind.NUMERIC, ("sensor.x",), comparison=Comparison.BETWEEN, threshold=4, upper_threshold=2),)))
+    with pytest.raises(ValueError, match="invalid time"):
+        validate_condition(ConditionNode("time_window", {"start": "25:00", "end": "07:00"}))

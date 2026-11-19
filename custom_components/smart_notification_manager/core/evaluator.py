@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from datetime import datetime, time
 from typing import Any
@@ -49,6 +50,8 @@ def evaluate_condition(node: ConditionNode, context: EvaluationContext) -> bool:
 
 
 def _compare(current: float, comparison: str, threshold: float, upper: Any) -> bool:
+    if not math.isfinite(float(current)) or not math.isfinite(float(threshold)):
+        return False
     if comparison == Comparison.EQ:
         return current == threshold
     if comparison == Comparison.NE:
@@ -62,7 +65,7 @@ def _compare(current: float, comparison: str, threshold: float, upper: Any) -> b
     if comparison == Comparison.LTE:
         return current <= threshold
     if comparison == Comparison.BETWEEN:
-        return upper is not None and threshold <= current <= float(upper)
+        return upper is not None and math.isfinite(float(upper)) and threshold <= current <= float(upper)
     raise ValueError(f"unknown comparison: {comparison}")
 
 
@@ -74,10 +77,18 @@ def evaluate_state_trigger(
     to_state: str | None,
     elapsed_seconds: float = 0,
     minimum_duration_seconds: float = 0,
+    unknown_policy: str = "ignore",
+    unavailable_policy: str = "ignore",
 ) -> bool:
     """Evaluate a state transition, treating unknown values explicitly."""
 
-    if before in {"unknown", "unavailable"} or after in {"unknown", "unavailable"}:
+    if before == "unknown" and unknown_policy != "match":
+        return False
+    if after == "unknown" and unknown_policy != "match":
+        return False
+    if before == "unavailable" and unavailable_policy != "match":
+        return False
+    if after == "unavailable" and unavailable_policy != "match":
         return False
     if elapsed_seconds < minimum_duration_seconds:
         return False
@@ -99,11 +110,15 @@ def evaluate_numeric_trigger(
 ) -> bool:
     """Evaluate numeric thresholds with duration and anti-chatter hysteresis."""
 
-    if elapsed_seconds < minimum_duration_seconds:
+    if not math.isfinite(float(current)) or elapsed_seconds < minimum_duration_seconds:
         return False
     margin = hysteresis if previous_match else 0
     if comparison in {Comparison.GT, Comparison.GTE}:
         return current > threshold - margin if comparison == Comparison.GT else current >= threshold - margin
     if comparison in {Comparison.LT, Comparison.LTE}:
         return current < threshold + margin if comparison == Comparison.LT else current <= threshold + margin
+    if comparison == Comparison.BETWEEN:
+        if upper_threshold is None or not math.isfinite(float(upper_threshold)):
+            return False
+        return threshold - margin <= current <= float(upper_threshold) + margin
     return _compare(current, comparison, threshold, upper_threshold)

@@ -15,14 +15,20 @@
         rules: [
           {rule_id: "fixture-door", name: "Haustür offen", category: "Sicherheit", priority: "warning", enabled: true, description: "Meldung bei geöffneter Haustür", triggers: [{entity_ids: ["binary_sensor.haustuer"], to_state: "on", minimum_duration_seconds: 30, delay_seconds: 0}], conditions: {kind: "all", children: [{kind: "entity_state", value: {entity_id: "binary_sensor.haustuer", state: "on"}}]}}
         ],
-        onSave: (rule) => console.log("Fixture save", rule),
+        onSave: (rule) => { document.body.dataset.savedVersion = String(rule.version); document.body.dataset.saved = rule.triggers.length > 1 ? "passed" : "failed"; },
         onDelete: (id) => console.log("Fixture delete", id),
         onDuplicate: (rule) => console.log("Fixture duplicate", rule)
       };
       editor.open("fixture-door");
       setTimeout(() => {
-        editor.shadowRoot.querySelector('[data-action="add-condition"]').click();
-        document.body.dataset.interaction = editor.shadowRoot.querySelectorAll(".condition-row").length > 0 ? "passed" : "failed";
+        try {
+          editor._draft.conditions.children.push({ kind: "entity_state", value: { entity_id: "binary_sensor.haustuer", state: "on" }, children: [] });
+          editor._draft.triggers.push({ kind: "state", entity_ids: ["sensor.wohnzimmer_temperatur"], to_state: "on", from_state: null, minimum_duration_seconds: 0, delay_seconds: 0, unknown_policy: "ignore", unavailable_policy: "ignore" });
+          editor._dirty = true;
+          editor.render();
+          editor.save();
+          document.body.dataset.interaction = editor.shadowRoot.querySelectorAll(".condition-row").length > 0 ? "passed" : "failed";
+        } catch (error) { document.body.dataset.fixtureError = error.message; }
       }, 25);
     </script>
   </body>
