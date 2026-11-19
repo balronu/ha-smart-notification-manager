@@ -17,6 +17,7 @@ from .core.adapters import DeliveryRequest
 from .core.alarm_lifecycle import AlarmLifecycleStore, AlarmPolicy, alarm_to_dict
 from .core.delivery_store import DeliveryStore
 from .core.entity_catalog import list_entity_snapshots
+from .core.policies import Pause, PolicyStore, QuietHours, RateLimitPolicy, RuleDependency
 from .core.recipient_store import RecipientStore
 from .core.recipients import Recipient, RecipientDevice, RecipientGroup
 from .core.revalidation import revalidate_alarm
@@ -34,7 +35,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, websocket_save)
     websocket_api.async_register_command(hass, websocket_delete)
     websocket_api.async_register_command(hass, websocket_duplicate)
-    for handler in (websocket_recipient_list, websocket_recipient_save, websocket_recipient_delete, websocket_group_save, websocket_channel_save, websocket_channel_group_save, websocket_channel_group_delete, websocket_template_save, websocket_template_delete, websocket_routing_preview, websocket_rule_routing_save, websocket_delivery_enqueue, websocket_delivery_list, websocket_alarm_list, websocket_alarm_trigger, websocket_alarm_events, websocket_alarm_acknowledge, websocket_alarm_acknowledge_many, websocket_alarm_resolve, websocket_alarm_close):
+    for handler in (websocket_recipient_list, websocket_recipient_save, websocket_recipient_delete, websocket_group_save, websocket_channel_save, websocket_channel_group_save, websocket_channel_group_delete, websocket_template_save, websocket_template_delete, websocket_routing_preview, websocket_rule_routing_save, websocket_delivery_enqueue, websocket_delivery_list, websocket_alarm_list, websocket_alarm_trigger, websocket_alarm_events, websocket_alarm_acknowledge, websocket_alarm_acknowledge_many, websocket_alarm_resolve, websocket_alarm_close, websocket_policy_list, websocket_policy_quiet_save, websocket_policy_pause_save, websocket_policy_pause_resume, websocket_policy_rate_limit_save, websocket_policy_dependency_save, websocket_policy_observation_save, websocket_policy_evaluate):
         websocket_api.async_register_command(hass, handler)
     hass.data[DOMAIN]["websocket_registered"] = True
 
@@ -441,6 +442,105 @@ async def websocket_alarm_close(hass: HomeAssistant, connection, msg: dict[str, 
         _send_alarm_storage_error(connection, msg, err)
 
 
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/policy/list"})
+@websocket_api.async_response
+async def websocket_policy_list(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        connection.send_result(msg["id"], await _policy_store(hass).async_list())
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_storage_error(connection, msg, err)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/policy/quiet/save", probatio.Required("quiet"): dict})
+@websocket_api.async_response
+async def websocket_policy_quiet_save(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        value = msg["quiet"]
+        quiet = QuietHours(value["quiet_id"], value["name"], bool(value.get("enabled", True)), tuple(value.get("weekdays", range(7))), value["start_time"], value["end_time"], value.get("timezone", "UTC"), tuple(value.get("rule_exceptions", ())), tuple(value.get("priority_exceptions", ("critical",))))
+        saved = await _policy_store(hass).async_save_quiet_hours(quiet, user_id=connection.user.id, now=datetime.now(UTC))
+        connection.send_result(msg["id"], {"quiet": asdict(saved)})
+    except (KeyError, TypeError, ValueError, PermissionError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Ruhezeit ist ungültig.")
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/policy/pause/save", probatio.Required("pause"): dict})
+@websocket_api.async_response
+async def websocket_policy_pause_save(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        value = msg["pause"]
+        pause = Pause(value["pause_id"], value["scope_type"], value.get("scope_id"), datetime.fromisoformat(value["starts_at"]), datetime.fromisoformat(value["ends_at"]) if value.get("ends_at") else None, value["reason"], connection.user.id, bool(value.get("critical_confirmed", False)), bool(value.get("active", True)))
+        if value.get("priority") == "critical" and not pause.critical_confirmed:
+            raise PermissionError("Critical-Pause benötigt Bestätigung")
+        saved = await _policy_store(hass).async_save_pause(pause, now=datetime.now(UTC))
+        connection.send_result(msg["id"], {"pause": asdict(saved)})
+    except PermissionError:
+        connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Für diese Critical-Pause fehlt die Bestätigung.")
+    except (KeyError, TypeError, ValueError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Pause ist ungültig.")
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/policy/pause/resume", probatio.Required("pause_id"): str})
+@websocket_api.async_response
+async def websocket_policy_pause_resume(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        await _policy_store(hass).async_resume_pause(msg["pause_id"])
+        connection.send_result(msg["id"], {})
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_storage_error(connection, msg, err)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/policy/rate-limit/save", probatio.Required("policy"): dict})
+@websocket_api.async_response
+async def websocket_policy_rate_limit_save(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        value = msg["policy"]
+        policy = RateLimitPolicy(value["rule_id"], int(value["window_seconds"]), int(value["max_notifications"]), bool(value.get("critical_exempt", True)), bool(value.get("enabled", True)))
+        saved = await _policy_store(hass).async_save_rate_limit(policy, user_id=connection.user.id, now=datetime.now(UTC))
+        connection.send_result(msg["id"], {"policy": asdict(saved)})
+    except (KeyError, TypeError, ValueError, PermissionError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Das Rate-Limit ist ungültig.")
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/policy/dependency/save", probatio.Required("dependency"): dict})
+@websocket_api.async_response
+async def websocket_policy_dependency_save(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        value = msg["dependency"]
+        dependency = RuleDependency(value["rule_id"], value["depends_on_rule_id"], value["expected_state"], bool(value.get("enabled", True)))
+        saved = await _policy_store(hass).async_save_dependency(dependency, user_id=connection.user.id, now=datetime.now(UTC))
+        connection.send_result(msg["id"], {"dependency": asdict(saved)})
+    except (KeyError, TypeError, ValueError, PermissionError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Regelabhängigkeit ist ungültig.")
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/policy/observation/save", probatio.Required("rule_id"): str})
+@websocket_api.async_response
+async def websocket_policy_observation_save(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        await _policy_store(hass).async_save_observation(msg["rule_id"], enabled=bool(msg.get("enabled", False)), critical_confirmed=bool(msg.get("critical_confirmed", False)), user_id=connection.user.id, now=datetime.now(UTC))
+        connection.send_result(msg["id"], {})
+    except (KeyError, TypeError, ValueError, PermissionError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Der Beobachtungsmodus ist ungültig.")
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/policy/evaluate", probatio.Required("request"): dict})
+@websocket_api.async_response
+async def websocket_policy_evaluate(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        decision = await _policy_store(hass).async_decide(msg["request"], now=datetime.now(UTC))
+        connection.send_result(msg["id"], {"decision": asdict(decision)})
+    except (KeyError, TypeError, ValueError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Policy-Entscheidung ist ungültig.")
+
+
 def _store(hass: HomeAssistant) -> RuleStore:
     runtime = hass.data.get(DOMAIN, {})
     store = runtime.get("rule_store")
@@ -452,6 +552,14 @@ def _store(hass: HomeAssistant) -> RuleStore:
 def _recipient_store(hass: HomeAssistant) -> RecipientStore:
     runtime = hass.data.get(DOMAIN, {})
     store = runtime.get("recipient_store")
+    if store is None:
+        raise RuntimeError("Smart Notification Manager is not configured")
+    return store
+
+
+def _policy_store(hass: HomeAssistant) -> PolicyStore:
+    runtime = hass.data.get(DOMAIN, {})
+    store = runtime.get("policy_store")
     if store is None:
         raise RuntimeError("Smart Notification Manager is not configured")
     return store

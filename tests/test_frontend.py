@@ -26,6 +26,11 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert "smart_notification_manager/alarm/resolve" in source
     assert "smart_notification_manager/alarm/close" in source
     assert "smart_notification_manager/alarm/acknowledge_many" in source
+    assert "smart-notification-phase5-policy-manager" in source
+    assert "smart_notification_manager/policy/quiet/save" in source
+    assert "smart_notification_manager/policy/pause/save" in source
+    assert "policy/list" in source
+    assert "Ruhezeiten, Pausen und Richtlinien" in source
     assert "Auswahl quittieren" in source
     assert "teilweise quittiert" in source
     assert "vollständig quittiert" in source
@@ -33,3 +38,4 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert (FRONTEND.parent / "phase-3-fixture.html").exists()
     assert (FRONTEND.parent / "phase-3-live-fixture.html").exists()
     assert (FRONTEND.parent / "phase-4-alarm-fixture.html").exists()
+    assert (FRONTEND.parent / "phase-5-policy-fixture.html").exists()
