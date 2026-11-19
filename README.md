@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Entwicklungsstatus:** Phase 8 befindet sich in Entwicklung. Vorlagenbibliothek, Regel-Assistent, Simulation und Versionshistorie werden auf dem Phase-1–7-Fundament ergänzt. Issue #24, die authentifizierte HA-Runtime-/Panel-E2E-Prüfung und Qualitäts-Gates #16–#19 bleiben vor der Beta offen.
+> **Entwicklungsstatus:** Phase 8 ist in `main` integriert. Vorlagenbibliothek, Regel-Assistent, schreibfreie Simulation und Versionshistorie sind abgeschlossen. Issue #24, die authentifizierte HA-Runtime-/Panel-E2E-Prüfung und Qualitäts-Gates #16–#19 bleiben vor der Beta offen.
 
 ## Ziel
 
@@ -86,7 +86,7 @@ als verbindlicher Beta-Vorbehalt dokumentiert.
 
 ## Entwicklung
 
-### Phase 8 – in Entwicklung
+### Phase 8 – abgeschlossen
 
 Die Phase ergänzt 14 entity-agnostische Regelvorlagen, einen deutschen
 zehnstufigen Assistenten, sichere JSON-Import-/Export-Vorschauen,

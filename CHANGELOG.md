@@ -1,12 +1,13 @@
 # Changelog
 
-## Unveröffentlicht – Phase 8 in Entwicklung
+## Unveröffentlicht – Phase 8 abgeschlossen
 
 - 14 deutsche, entity-agnostische Regelvorlagen mit sicherem JSON-Import/Export.
 - Zehnstufiger Regel-Assistent mit bestehendem RuleStore- und Routing-Vertrag.
 - Server-seitige Simulation ohne Alarm-, Delivery-, Rate-Limit- oder Auditänderung.
 - Versionshistorie mit optimistischer Prüfung und Restore als neue Version.
 - Keine echten Nachrichten, Anrufe, TTS-Ausgaben, Releases oder Tags.
+- PR #30 ist in `main` integriert; Main-CI und die verpflichtenden PR-Checks waren erfolgreich.
 
 ## Unveröffentlicht – Phase 7 abgeschlossen
 
