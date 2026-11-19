@@ -49,6 +49,11 @@ Routing-Vorschauen und simulationsbasierte Adapter. Echte HA-Notify-Aktionen,
 Telegram, WhatsApp, E-Mail, TTS, FRITZ!Box- und SIP/PBX-Ausgaben sind noch
 nicht aktiviert.
 
+Der technische Versand-Lifecycle mit Idempotenz, Lease-Schutz und begrenztem
+Backoff ist vorbereitet. Reale HA-Service-Adapter verwenden ausschließlich
+konfigurierte Home-Assistant-Dienste und benötigen eine explizite Freigabe;
+automatischer Echtversand ist in dieser Entwicklungsphase gesperrt.
+
 ## Entwicklung
 
 ```bash

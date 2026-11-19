@@ -12,6 +12,8 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
+from .core.adapters import DeliveryRequest
+from .core.delivery_store import DeliveryStore
 from .core.entity_catalog import list_entity_snapshots
 from .core.recipient_store import RecipientStore
 from .core.recipients import Recipient, RecipientDevice, RecipientGroup
@@ -29,7 +31,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, websocket_save)
     websocket_api.async_register_command(hass, websocket_delete)
     websocket_api.async_register_command(hass, websocket_duplicate)
-    for handler in (websocket_recipient_list, websocket_recipient_save, websocket_group_save, websocket_channel_save, websocket_template_save, websocket_routing_preview):
+    for handler in (websocket_recipient_list, websocket_recipient_save, websocket_group_save, websocket_channel_save, websocket_template_save, websocket_routing_preview, websocket_delivery_enqueue, websocket_delivery_list):
         websocket_api.async_register_command(hass, handler)
     hass.data[DOMAIN]["websocket_registered"] = True
 
@@ -210,6 +212,42 @@ async def websocket_routing_preview(hass: HomeAssistant, connection, msg: dict[s
         _send_storage_error(connection, msg, err)
 
 
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/delivery/enqueue", probatio.Required("request"): dict, probatio.Required("channel_id"): str, probatio.Required("idempotency_key"): str})
+@websocket_api.async_response
+async def websocket_delivery_enqueue(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """Persist a pending job; enqueueing alone never invokes an HA service."""
+
+    try:
+        value = msg["request"]
+        request = DeliveryRequest(
+            attempt_id=value["attempt_id"],
+            recipient_id=value["recipient_id"],
+            title=str(value.get("title", "")),
+            message=value["message"],
+            payload=dict(value.get("payload", {})),
+        )
+        job = await DeliveryStore(_recipient_store(hass).repository).async_enqueue(
+            request, idempotency_key=msg["idempotency_key"], channel_id=msg["channel_id"]
+        )
+        connection.send_result(msg["id"], {"job": _job_to_dict(job)})
+    except (KeyError, TypeError, ValueError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Der Versandauftrag ist ungültig.")
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_storage_error(connection, msg, err)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/delivery/list"})
+@websocket_api.async_response
+async def websocket_delivery_list(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        jobs = await DeliveryStore(_recipient_store(hass).repository).async_list()
+        connection.send_result(msg["id"], {"jobs": [_job_to_dict(job) for job in jobs]})
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_storage_error(connection, msg, err)
+
+
 def _store(hass: HomeAssistant) -> RuleStore:
     runtime = hass.data.get(DOMAIN, {})
     store = runtime.get("rule_store")
@@ -224,6 +262,20 @@ def _recipient_store(hass: HomeAssistant) -> RecipientStore:
     if store is None:
         raise RuntimeError("Smart Notification Manager is not configured")
     return store
+
+
+def _job_to_dict(job) -> dict[str, Any]:
+    return {
+        "attempt_id": job.attempt_id,
+        "idempotency_key": job.idempotency_key,
+        "recipient_id": job.recipient_id,
+        "channel_id": job.channel_id,
+        "state": job.state,
+        "attempt_number": job.attempt_number,
+        "next_attempt_at": job.next_attempt_at.isoformat() if job.next_attempt_at else None,
+        "delivery_confirmed": job.delivery_confirmed,
+        "payload": job.payload,
+    }
 
 
 def _send_storage_error(connection, msg: dict[str, Any], err: Exception) -> None:

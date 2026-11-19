@@ -7,6 +7,7 @@
 - Sichere deutsche Vorlagen mit erlaubten Platzhaltern und kontrolliertem Umgang mit fehlenden Werten.
 - Persistente Phase-3-WebSocket-Verträge und simulationsbasierte Adapter ohne Netzwerkaktion.
 - Responsive Empfänger-/Kanalverwaltung als isolierte Desktop-/Mobile-Fixture.
+- Persistente Delivery-Jobs mit Idempotenz, Lease-Claims, Backoff und generischem HA-Service-Adapter; kein automatischer Echtversand.
 
 ## Unveröffentlicht – Phase 2 abgeschlossen
 

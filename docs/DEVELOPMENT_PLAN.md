@@ -4,7 +4,7 @@
 |---:|---|---|
 | 1 | Fundament, Modelle, Storage, Flows, Rechtebasis, Tests | abgeschlossen: in `main` integriert, 17 Tests und GitHub-CI grün |
 | 2 | Read-only HA-Discovery, Regel-/Bedingungseditor und Importmodell | abgeschlossen: PR #14 in `main`, 34 Tests und Main-CI grün |
-| 3 | Empfänger, Kanäle und Versand-Routing | in Entwicklung: Empfänger-/Gruppen-Store, sichere Routing-Vorschau und simulierte Adapter |
+| 3 | Empfänger, Kanäle und Versand-Routing | in Entwicklung: Empfänger-/Gruppen-Store, HA-Service-Adapter, persistenter Delivery-Lifecycle und sichere Routing-Vorschau |
 | 4 | Empfänger, Geräte, Gruppen und Fähigkeiten | deterministische Zielprofile |
 | 5 | Delivery Router und erste HA-Notify-Adapter | isolierte Mock-Zustellung |
 | 6 | Alarm-Lifecycle, Bestätigung, Eskalation | Zustandsmatrix und Recovery |

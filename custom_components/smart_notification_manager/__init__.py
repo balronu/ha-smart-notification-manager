@@ -11,6 +11,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import CONF_DB_PATH, DEFAULT_DB_PATH, DOMAIN
+from .core.delivery_store import DeliveryStore
 from .core.recipient_store import RecipientStore
 from .core.repository import SQLiteRepository
 from .core.rule_store import RuleStore
@@ -39,6 +40,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         database_path = hass.config.path(database_path)
     runtime["rule_store"] = RuleStore(SQLiteRepository(database_path))
     runtime["recipient_store"] = RecipientStore(SQLiteRepository(database_path))
+    runtime["delivery_store"] = DeliveryStore(SQLiteRepository(database_path))
     if hasattr(hass, "config"):
         async_register_websocket(hass)
     if hasattr(hass, "http") and not runtime.get("frontend_registered"):
@@ -67,4 +69,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     runtime = hass.data.get(DOMAIN, {})
     runtime.get("entries", {}).pop(entry.entry_id, None)
     runtime.pop("rule_store", None)
+    runtime.pop("recipient_store", None)
+    runtime.pop("delivery_store", None)
     return True

@@ -18,11 +18,15 @@ verwendet jedoch einen authentifizierten Home-Assistant-WebSocket-Vertrag.
 - `resolve_recipients()`: deterministische Gruppen-/Geräteauflösung mit Überlappungs-Deduplizierung
 - `build_routing_preview()`: fähigkeitsabhängige Vorschau ohne Adapteraufruf oder Netzwerkzugriff
 - `render_template()`: begrenzte, erlaubte Platzhalter; unbekannte oder ausführbare Syntax wird abgewiesen
+- `DeliveryStore`/`DeliveryService`: idempotente technische Aufträge, Lease-Claims, begrenzte Backoff-Wiederholungen und sichere Statuspersistenz
+- `HAServiceAdapter`: Aufruf eines bereits registrierten `domain.service`; die Capability-Konfiguration bleibt explizit und provider-neutral
 
 Phase 3 registriert zusätzlich die Admin-WebSocket-Befehle
 `smart_notification_manager/recipient/list`, `/recipient/save`, `/group/save`,
-`/channel/save`, `/template/save` und `/routing/preview`. Adapter bleiben im
-Simulationsmodus; ein erfolgreicher Simulationsstatus ist keine Zustellbestätigung.
+`/channel/save`, `/template/save`, `/routing/preview`, `/delivery/enqueue` und
+`/delivery/list`. Das Enqueue ruft keinen Dienst auf. Reale Adapter verwenden
+ausschließlich vorhandene Home-Assistant-Dienste und benötigen zusätzlich eine
+explizite Versandfreigabe; ein Anbieter-Accept ist keine Zustellbestätigung.
 
 ## WebSocket-Fehlervertrag
 
