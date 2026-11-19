@@ -2,7 +2,7 @@
 
 | Phase | Inhalt | Abnahme |
 |---:|---|---|
-| 1 | Fundament, Modelle, Storage, Flows, Rechtebasis, Tests | aktueller Branch, Offline-Suite grün |
+| 1 | Fundament, Modelle, Storage, Flows, Rechtebasis, Tests | abgeschlossen: in `main` integriert, 17 Tests und GitHub-CI grün |
 | 2 | Read-only HA-Discovery und Importmodell | Fixture-Import ohne Versand |
 | 3 | Regel-/Bedingungseditor und CRUD-Verträge | validierte Regelversionen |
 | 4 | Empfänger, Geräte, Gruppen und Fähigkeiten | deterministische Zielprofile |
@@ -15,5 +15,5 @@
 | 11 | geführte Migration, Hybridbetrieb, Backup/Rollback | Pilot ohne Sicherheitsquellen |
 | 12 | HACS-/CI-/Release-Readiness und vollständige Integration | alle Gates, keine offenen Pflichttests |
 
+Phase 1 ist abgeschlossen. Phase 2 beginnt erst nach ausdrücklicher Freigabe.
 Die erste öffentliche Beta bleibt bis zum Abschluss aller zwölf Phasen gesperrt.
-

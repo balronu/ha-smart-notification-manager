@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Entwicklungsstatus:** Phase 1 von 12 – technisches Fundament. Noch nicht installierbar, kein Versand, keine Telefonie, kein HACS-Release.
+> **Entwicklungsstatus:** Phase 1 von 12 abgeschlossen; Phase 2 wartet auf Freigabe. Noch nicht installierbar, kein Versand, keine Telefonie, kein HACS-Release.
 
 ## Ziel
 
@@ -15,7 +15,7 @@ Der Smart Notification Manager soll Regeln, Alarmlebenszyklen, Empfänger, Kanä
 - Versionierte SQLite-Schema-Migration mit Foreign Keys, Indizes und eindeutiger aktiver Alarmursache
 - Async-sicherer Repository-Rahmen über `asyncio.to_thread`
 - Adapter-, Router-, Rechte-, Bedingungs- und Lifecycle-Verträge
-- Offline-Tests ohne produktive Home-Assistant-Installation
+- Offline-Tests ohne produktive Home-Assistant-Installation; Phase-1-Abnahme mit 17 Tests und grüner GitHub-CI
 
 Die Datenbank wird in Phase 1 nicht automatisch in einer produktiven HA-Instanz angelegt. Es existiert noch kein Versand-Service.
 
@@ -50,5 +50,4 @@ Die Lizenzentscheidung ist in Phase 1 offen und wird vor einer öffentlichen Ver
 
 ## English summary
 
-Smart Notification Manager is a German-first Home Assistant custom integration under development. Phase 1 contains only the offline-safe foundation: domain models, versioned SQLite schema, Config/Options Flow and tests. Delivery, telephony, frontend and HACS publication are not available yet.
-
+Smart Notification Manager is a German-first Home Assistant custom integration under development. Phase 1 is complete and contains only the offline-safe foundation: domain models, versioned SQLite schema, Config/Options Flow and tests. Delivery, telephony, frontend and HACS publication are not available yet.
