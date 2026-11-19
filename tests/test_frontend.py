@@ -11,3 +11,7 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert "@media(max-width:520px)" in source
     assert "textarea" in source
     assert "JSON" not in source
+    assert "smart-notification-recipient-manager" in source
+    assert "Empfänger und Kanäle" in source
+    assert "smart_notification_manager/recipient/save" in source
+    assert (FRONTEND.parent / "phase-3-fixture.html").exists()

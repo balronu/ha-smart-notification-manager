@@ -1,5 +1,13 @@
 # Changelog
 
+## Unveröffentlicht – Phase 3 in Entwicklung
+
+- Empfänger mit mehreren Geräten, Primärgerät, Verfügbarkeit und Gruppenmitgliedschaften.
+- Deterministische Auflösung überlappender Gruppen und Routing-Vorschau nach Kanal-Fähigkeiten.
+- Sichere deutsche Vorlagen mit erlaubten Platzhaltern und kontrolliertem Umgang mit fehlenden Werten.
+- Persistente Phase-3-WebSocket-Verträge und simulationsbasierte Adapter ohne Netzwerkaktion.
+- Responsive Empfänger-/Kanalverwaltung als isolierte Desktop-/Mobile-Fixture.
+
 ## Unveröffentlicht – Phase 2 abgeschlossen
 
 - Validierte Regeldefinitionen mit Prioritäten, Triggern und rekursivem Bedingungsbaum.

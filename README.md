@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Entwicklungsstatus:** Phase 2 von 12 abgeschlossen und in `main` integriert. Noch nicht installierbar, kein Versand, keine Telefonie, kein HACS-Release.
+> **Entwicklungsstatus:** Phase 3 von 12 in Entwicklung. Empfänger-, Kanal- und Routing-Grundlagen sind implementiert; kein echter Versand, keine Telefonie und kein HACS-Release.
 
 ## Ziel
 
@@ -40,6 +40,14 @@ Bedingungsgruppen, verständliche Vorschau und responsive Darstellung.
 
 Die Screenshots stammen aus dem isolierten Browser-Fixture und zeigen keine
 produktive Home-Assistant-Instanz.
+
+## Phase-3-Zwischenstand
+
+Implementiert sind persistente Empfänger und Gruppen, Primär-/Alle-Geräte-
+Auflösung, Deduplizierung, sichere Nachrichtenvorlagen, kanalabhängige
+Routing-Vorschauen und simulationsbasierte Adapter. Echte HA-Notify-Aktionen,
+Telegram, WhatsApp, E-Mail, TTS, FRITZ!Box- und SIP/PBX-Ausgaben sind noch
+nicht aktiviert.
 
 ## Entwicklung
 

@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 from smart_notification_manager.const import DOMAIN
+from smart_notification_manager.core.recipient_store import RecipientStore
 from smart_notification_manager.core.repository import SQLiteRepository
 from smart_notification_manager.core.rule_store import RuleStore, rule_to_dict
 from smart_notification_manager.core.rules import (
@@ -13,7 +14,7 @@ from smart_notification_manager.core.rules import (
     TriggerDefinition,
     TriggerKind,
 )
-from smart_notification_manager.websocket import websocket_save
+from smart_notification_manager.websocket import websocket_recipient_save, websocket_save
 
 
 class Connection:
@@ -110,3 +111,14 @@ async def test_api_returns_safe_error_when_integration_is_missing():
     connection = Connection()
     await implementation(websocket_save)(SimpleNamespace(data={}), connection, {"id": 4, "rule": rule_to_dict(base_rule())})
     assert connection.errors == [(4, "unknown_error", "Die Regelverwaltung ist derzeit nicht verfügbar.")]
+
+
+@pytest.mark.asyncio
+async def test_recipient_api_persists_devices_without_external_send(tmp_path):
+    store = RecipientStore(SQLiteRepository(tmp_path / "manager.sqlite3"))
+    hass = SimpleNamespace(data={DOMAIN: {"recipient_store": store}})
+    connection = Connection()
+    handler = implementation(websocket_recipient_save)
+    await handler(hass, connection, {"id": 6, "recipient": {"recipient_id": "michael", "display_name": "Michael", "devices": [{"device_id": "phone", "display_name": "Telefon", "channel_id": "mobile", "primary": True, "available": True}]}})
+    assert connection.errors == []
+    assert (await store.async_list_recipients())[0].devices[0].channel_id == "mobile"
