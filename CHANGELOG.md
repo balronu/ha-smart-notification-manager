@@ -1,6 +1,6 @@
 # Changelog
 
-## Unveröffentlicht – Phase 3 in Entwicklung
+## Unveröffentlicht – Phase 3 abgeschlossen
 
 - Empfänger mit mehreren Geräten, Primärgerät, Verfügbarkeit und Gruppenmitgliedschaften.
 - Deterministische Auflösung überlappender Gruppen und Routing-Vorschau nach Kanal-Fähigkeiten.
@@ -8,6 +8,10 @@
 - Persistente Phase-3-WebSocket-Verträge und simulationsbasierte Adapter ohne Netzwerkaktion.
 - Responsive Empfänger-/Kanalverwaltung als isolierte Desktop-/Mobile-Fixture.
 - Persistente Delivery-Jobs mit Idempotenz, Lease-Claims, Backoff und generischem HA-Service-Adapter; kein automatischer Echtversand.
+- Authentifizierte Live-WebSocket-Anbindung für Kanalgruppen, Vorlagen, Routing und Versandstatus.
+- CRUD-Roundtrips und Browser-Fixture-Nachweise für Desktop, Tablet und Smartphone.
+- Vollständige HA-HTTP-/WebSocket-/Panel-E2E bleibt wegen Issue #16 offen; Issues #16–#19 bleiben verbindliche Beta-Gates.
+- FRITZ!Box-Klingeln und SIP/PBX sind vorbereitet, aber nicht als vollständig implementierte Kanäle ausgewiesen.
 
 ## Unveröffentlicht – Phase 2 abgeschlossen
 
@@ -40,4 +44,4 @@
 - Explizite pytest-asyncio-Fixture-Loop-Konfiguration ohne Warnung.
 - Anforderungsmatrix, Architektur-, Datenmodell-, API-, Test-, Entwicklungs- und Release-Dokumentation.
 
-Phase 1 und Phase 2 sind in `main` integriert. Noch nicht veröffentlicht, kein Tag und kein HACS-Release. Phase 3 wurde nicht begonnen.
+Phase 1, Phase 2 und Phase 3 sind in `main` integriert. HA-Runtime-/Panel-E2E und die Qualitäts-Gates #16–#19 sind noch offen. Noch nicht veröffentlicht, kein Tag und kein HACS-Release. Phase 4 wurde nicht begonnen.

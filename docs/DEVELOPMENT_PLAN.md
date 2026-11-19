@@ -4,7 +4,7 @@
 |---:|---|---|
 | 1 | Fundament, Modelle, Storage, Flows, Rechtebasis, Tests | abgeschlossen: in `main` integriert, 17 Tests und GitHub-CI grün |
 | 2 | Read-only HA-Discovery, Regel-/Bedingungseditor und Importmodell | abgeschlossen: PR #14 in `main`, 34 Tests und Main-CI grün |
-| 3 | Empfänger, Kanäle und Versand-Routing | in Entwicklung: Empfänger-/Gruppen-Store, HA-Service-Adapter, persistenter Delivery-Lifecycle und sichere Routing-Vorschau |
+| 3 | Empfänger, Kanäle und Versand-Routing | abgeschlossen: Live-WebSocket-UI, CRUD-Persistenz, Routing, Vorlagen, Versandstatus, 50 Tests und CI grün; HA-Runtime-/Panel-E2E bleibt als Gate #16 offen |
 | 4 | Empfänger, Geräte, Gruppen und Fähigkeiten | deterministische Zielprofile |
 | 5 | Delivery Router und erste HA-Notify-Adapter | isolierte Mock-Zustellung |
 | 6 | Alarm-Lifecycle, Bestätigung, Eskalation | Zustandsmatrix und Recovery |
@@ -15,5 +15,5 @@
 | 11 | geführte Migration, Hybridbetrieb, Backup/Rollback | Pilot ohne Sicherheitsquellen |
 | 12 | HACS-/CI-/Release-Readiness und vollständige Integration | alle Gates, keine offenen Pflichttests |
 
-Phase 1 und Phase 2 sind abgeschlossen. Phase 3 beginnt erst nach ausdrücklicher Freigabe.
+Phase 1, Phase 2 und Phase 3 sind abgeschlossen und in `main` integriert. Die vollständige authentifizierte Home-Assistant-HTTP-/WebSocket-/Panel-E2E-Prüfung bleibt in Issue #16 offen. Die Gates #17 Hassfest, #18 HACS und #19 Secret-Scan bleiben ebenfalls vor der Beta verbindlich offen. FRITZ!Box und SIP/PBX sind vorbereitet, nicht vollständig implementiert. Phase 4 beginnt erst nach ausdrücklicher Freigabe.
 Die erste öffentliche Beta bleibt bis zum Abschluss aller zwölf Phasen gesperrt.

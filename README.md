@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Entwicklungsstatus:** Phase 3 von 12 in Entwicklung. Empfänger-, Kanal- und Routing-Grundlagen sind implementiert; kein echter Versand, keine Telefonie und kein HACS-Release.
+> **Entwicklungsstatus:** Phase 3 von 12 abgeschlossen und in `main` integriert. Die vollständige authentifizierte Home-Assistant-HTTP-/WebSocket-/Panel-E2E-Prüfung sowie Qualitäts-Gates #16–#19 bleiben vorläufige Beta-Blocker.
 
 ## Ziel
 
@@ -41,13 +41,18 @@ Bedingungsgruppen, verständliche Vorschau und responsive Darstellung.
 Die Screenshots stammen aus dem isolierten Browser-Fixture und zeigen keine
 produktive Home-Assistant-Instanz.
 
-## Phase-3-Zwischenstand
+## Phase-3-Ergebnis
 
-Implementiert sind persistente Empfänger und Gruppen, Primär-/Alle-Geräte-
-Auflösung, Deduplizierung, sichere Nachrichtenvorlagen, kanalabhängige
-Routing-Vorschauen und simulationsbasierte Adapter. Echte HA-Notify-Aktionen,
-Telegram, WhatsApp, E-Mail, TTS, FRITZ!Box- und SIP/PBX-Ausgaben sind noch
-nicht aktiviert.
+Implementiert sind die persistente grafische Verwaltung von Empfängern,
+Gruppen, Kanälen, Kanalgruppen und Vorlagen, Primär-/Alle-Geräte-Auflösung,
+Deduplizierung, Routing pro Regel, Versandvorschau und Versandstatus über
+authentifizierte WebSocket-Verträge. Echte Nachrichten, Anrufe und TTS-
+Ausgaben bleiben gesperrt.
+
+HA-Notify, Mobile-App, Telegram, WhatsApp, E-Mail und TTS sind nur über
+konfigurierte HA-Aktionen beziehungsweise als Adaptergrenzen vorgesehen.
+FRITZ!Box-Klingeln und SIP/PBX-Sprachanrufe sind vorbereitet, aber nicht als
+vollständig implementierte Kanäle abzunehmen.
 
 Der technische Versand-Lifecycle mit Idempotenz, Lease-Schutz und begrenztem
 Backoff ist vorbereitet. Reale HA-Service-Adapter verwenden ausschließlich
@@ -63,7 +68,7 @@ uv run ruff check .
 python -m compileall custom_components
 ```
 
-Für die Entwicklungsstände existieren noch keine öffentlichen Installationsanweisungen. Es werden keine GitHub-Releases, Tags oder öffentlichen HACS-Einträge erzeugt. Vor `v1.0.0-beta.1` müssen die offenen Qualitäts-Gates aus den verknüpften GitHub-Issues abgeschlossen sein.
+Für die Entwicklungsstände existieren noch keine öffentlichen Installationsanweisungen. Es werden keine GitHub-Releases, Tags oder öffentlichen HACS-Einträge erzeugt. Vor `v1.0.0-beta.1` müssen die Qualitäts-Gates #16 (HA-Runtime-/Panel-E2E), #17 (Hassfest), #18 (HACS) und #19 (Secret-Scan) abgeschlossen sein.
 
 ## Beiträge und Fehler
 
@@ -75,4 +80,4 @@ Die Lizenzentscheidung ist weiterhin offen und wird vor einer öffentlichen Ver�
 
 ## English summary
 
-Smart Notification Manager is a German-first Home Assistant custom integration under development. Phase 2 is complete on `main` and adds an authenticated admin panel, recursive visual rule editing, versioned SQLite persistence and isolated browser/API tests. Delivery, telephony and HACS publication are not available yet.
+Smart Notification Manager is a German-first Home Assistant custom integration under development. Phase 3 is integrated on `main` and adds authenticated live configuration for recipients, channels, templates, routing and delivery status. Full HA runtime E2E, telephony and HACS publication remain gated.
