@@ -1,6 +1,6 @@
 # Changelog
 
-## Unveröffentlicht – Phase 6 in Entwicklung
+## Unveröffentlicht – Phase 6 abgeschlossen
 
 - Zentrale Alarmübersicht mit serverseitiger Suche, Filtern, Sortierung,
   Gruppierung und Pagination.
@@ -10,6 +10,7 @@
 - Responsive deutsche Panel-Komponente für Desktop, iPad und iPhone.
 - HA-Runtime-/Panel-E2E sowie Gates #16–#19 bleiben offen; kein Release und
   kein Tag.
+- PR #26 wurde nach `main` integriert; Main-CI für den Merge-Commit war erfolgreich.
 
 ## Unveröffentlicht – Phase 5 abgeschlossen
 
