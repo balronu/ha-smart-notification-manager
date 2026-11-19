@@ -47,3 +47,20 @@ jobs:
       - run: cmp --silent frontend/smart-notification-manager-observation-card.js custom_components/smart_notification_manager/frontend/smart-notification-manager-observation-card.js
       - run: node --check frontend/phase-11-guided-migration.js
       - run: cmp --silent frontend/phase-11-guided-migration.js custom_components/smart_notification_manager/frontend/phase-11-guided-migration.js
+
+  hassfest:
+    name: hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    name: hacs
+    if: ${{ github.event.repository.visibility == 'public' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hacs/action@main
+        with:
+          category: integration
