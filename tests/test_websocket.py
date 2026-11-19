@@ -24,6 +24,10 @@ from smart_notification_manager.websocket import (
     websocket_channel_group_save,
     websocket_channel_save,
     websocket_delivery_enqueue,
+    websocket_phase9_discover,
+    websocket_phase9_prepare,
+    websocket_phase9_preview,
+    websocket_phase9_reference,
     websocket_policy_evaluate,
     websocket_policy_list,
     websocket_policy_quiet_save,
@@ -218,3 +222,38 @@ async def test_direct_websocket_enqueue_cannot_bypass_policy(tmp_path):
     connection = Connection()
     await implementation(websocket_delivery_enqueue)(hass, connection, {"id": 33, "request": {"attempt_id": "attempt", "recipient_id": "michael", "message": "x"}, "channel_id": "mobile", "idempotency_key": "direct"})
     assert connection.errors[-1][0:2] == (33, "invalid_format")
+
+
+@pytest.mark.asyncio
+async def test_phase9_websocket_discovery_preview_and_prepare_are_read_only(tmp_path):
+    from smart_notification_manager.core.automation_migration import AutomationMigrationStore
+
+    automation = {"id": "window_notice", "alias": "Fensterhinweis", "trigger": {"platform": "state", "entity_id": "binary_sensor.window", "to": "on"}, "action": [{"service": "notify.mobile_app_phone", "data": {"message": "Offen"}}]}
+    repository = SQLiteRepository(tmp_path / "manager.sqlite3")
+    store = AutomationMigrationStore(repository)
+    hass = SimpleNamespace(data={DOMAIN: {"automation_migration_store": store}}, states=SimpleNamespace(async_all=list))
+    connection = Connection()
+    await implementation(websocket_phase9_discover)(hass, connection, {"id": 40, "automations": [automation]})
+    assert connection.results[-1][1]["automations"][0]["classification"] == "vollständig_migrierbar"
+    await implementation(websocket_phase9_preview)(hass, connection, {"id": 41, "automation": automation})
+    assert connection.results[-1][1]["no_automatic_activation"] is True
+    await implementation(websocket_phase9_prepare)(hass, connection, {"id": 42, "automation": automation})
+    assert connection.results[-1][1]["original_unchanged"] is True
+    assert await repository.async_run(lambda c: c.execute("SELECT COUNT(*) FROM alarm_instances").fetchone()[0]) == 0
+
+
+@pytest.mark.asyncio
+async def test_phase9_reference_websocket_is_idempotent_and_does_not_deliver(tmp_path):
+    from smart_notification_manager.core.automation_migration import AutomationMigrationStore
+
+    repository = SQLiteRepository(tmp_path / "manager.sqlite3")
+    hass = SimpleNamespace(data={DOMAIN: {"automation_migration_store": AutomationMigrationStore(repository)}})
+    connection = Connection()
+    handler = implementation(websocket_phase9_reference)
+    payload = {"id": 43, "automation_id": "auto", "execution_ref": "run", "entity_id": "sensor.x", "rule_id": "rule", "event": "open"}
+    await handler(hass, connection, payload)
+    first = connection.results[-1][1]["reference"]["alarm_id"]
+    await handler(hass, connection, {**payload, "id": 44})
+    assert connection.results[-1][1]["reference"]["alarm_id"] == first
+    assert connection.results[-1][1]["delivery_started"] is False
+    assert await repository.async_run(lambda c: c.execute("SELECT COUNT(*) FROM delivery_attempts").fetchone()[0]) == 0

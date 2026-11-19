@@ -44,3 +44,11 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert (FRONTEND.parent / "phase-4-alarm-fixture.html").exists()
     assert (FRONTEND.parent / "phase-6-alarm-center-fixture.html").exists()
     assert (FRONTEND.parent / "phase-5-policy-fixture.html").exists()
+    assert (FRONTEND.parent / "phase-9-automation-migration-fixture.html").exists()
+    phase9 = FRONTEND.parent / "phase-9-automation-migration.js"
+    assert phase9.exists()
+    source9 = phase9.read_text(encoding="utf-8")
+    assert "Automationen entdecken" in source9
+    assert "smart_notification_manager/phase9/discover" in source9
+    assert "Keine automatische Änderung" in source9
+    assert "@media(max-width:650px)" in source9

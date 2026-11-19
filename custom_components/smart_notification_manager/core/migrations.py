@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 
-CURRENT_SCHEMA_VERSION = 8
+CURRENT_SCHEMA_VERSION = 9
 
 
 def apply_migrations(connection: sqlite3.Connection) -> None:
@@ -42,6 +42,8 @@ def apply_migrations(connection: sqlite3.Connection) -> None:
                 _migration_v7(connection)
             elif next_version == 8:
                 _migration_v8(connection)
+            elif next_version == 9:
+                _migration_v9(connection)
             else:  # pragma: no cover - guarded by CURRENT_SCHEMA_VERSION
                 raise RuntimeError(f"missing migration {next_version}")
             connection.execute(f"PRAGMA user_version = {next_version}")
@@ -435,6 +437,53 @@ def _migration_v8(connection: sqlite3.Connection) -> None:
             UNIQUE(created_by, name)
         );
         CREATE INDEX IF NOT EXISTS ix_rule_templates_name ON rule_templates(name COLLATE NOCASE);
+        """,
+    )
+
+
+def _migration_v9(connection: sqlite3.Connection) -> None:
+    """Persist Phase-9 migration plans and stable external alarm references."""
+
+    _execute_sql_statements(
+        connection,
+        """
+        CREATE TABLE IF NOT EXISTS automation_migration_plans (
+            plan_id TEXT PRIMARY KEY,
+            automation_id TEXT NOT NULL,
+            source_hash TEXT NOT NULL,
+            classification TEXT NOT NULL,
+            draft_json TEXT NOT NULL,
+            original_json TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'prepared',
+            created_by TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ix_automation_migration_plans_automation
+            ON automation_migration_plans(automation_id, updated_at);
+        CREATE TABLE IF NOT EXISTS external_alarm_references (
+            reference_id TEXT PRIMARY KEY,
+            automation_id TEXT NOT NULL,
+            execution_ref TEXT NOT NULL,
+            entity_id TEXT NOT NULL,
+            rule_id TEXT,
+            alarm_id TEXT,
+            alarm_status TEXT NOT NULL DEFAULT 'open',
+            last_event TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(automation_id, execution_ref)
+        );
+        CREATE INDEX IF NOT EXISTS ix_external_alarm_refs_alarm
+            ON external_alarm_references(alarm_id, updated_at);
+        CREATE TABLE IF NOT EXISTS automation_migration_audit (
+            audit_id TEXT PRIMARY KEY,
+            plan_id TEXT,
+            automation_id TEXT NOT NULL,
+            action TEXT NOT NULL,
+            details_json TEXT NOT NULL DEFAULT '{}',
+            occurred_at TEXT NOT NULL
+        );
         """,
     )
 

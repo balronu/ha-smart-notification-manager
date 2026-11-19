@@ -13,6 +13,7 @@ from homeassistant.core import HomeAssistant
 from .const import CONF_DB_PATH, DEFAULT_DB_PATH, DOMAIN
 from .core.alarm_center import AlarmCenterStore
 from .core.alarm_lifecycle import AlarmLifecycleStore
+from .core.automation_migration import AutomationMigrationStore
 from .core.delivery_service import DeliveryService
 from .core.delivery_store import DeliveryStore
 from .core.metrics import async_get_coordinator
@@ -52,6 +53,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     runtime["delivery_store"] = DeliveryStore(repository)
     runtime["alarm_store"] = AlarmLifecycleStore(repository)
     runtime["alarm_center_store"] = AlarmCenterStore(repository)
+    runtime["automation_migration_store"] = AutomationMigrationStore(repository)
     runtime["policy_store"] = PolicyStore(repository)
     runtime["delivery_service"] = DeliveryService(runtime["delivery_store"], runtime["policy_store"])
     if hasattr(hass, "config_entries") and hasattr(hass.config_entries, "async_forward_entry_setups"):
@@ -77,6 +79,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         frontend.add_extra_js_url(hass, f"{FRONTEND_URL_BASE}/smart-notification-manager.js?v=2")
         frontend.add_extra_js_url(hass, f"{FRONTEND_URL_BASE}/smart-notification-manager-card.js?v=1")
         frontend.add_extra_js_url(hass, f"{FRONTEND_URL_BASE}/phase-8-rule-wizard.js?v=1")
+        frontend.add_extra_js_url(hass, f"{FRONTEND_URL_BASE}/phase-9-automation-migration.js?v=1")
         runtime["frontend_registered"] = True
     return True
 
@@ -95,6 +98,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     runtime.pop("delivery_service", None)
     runtime.pop("alarm_store", None)
     runtime.pop("alarm_center_store", None)
+    runtime.pop("automation_migration_store", None)
     runtime.pop("policy_store", None)
     runtime.pop("metrics_coordinator", None)
     runtime.pop("repository", None)

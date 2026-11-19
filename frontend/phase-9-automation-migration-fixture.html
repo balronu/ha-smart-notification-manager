@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Phase 9 Fixture</title><script src="phase-9-automation-migration.js"></script></head>
+<body><smart-notification-phase9-migration></smart-notification-phase9-migration><script>
+  customElements.whenDefined("smart-notification-phase9-migration").then(() => {
+    const element = document.querySelector("smart-notification-phase9-migration");
+    element.hass = { callWS: async (message) => message.type.endsWith("discover") ? { automations: [
+      { automation_id: "window_warning", name: "Fensterwarnung", entity_id: "automation.window_warning", enabled: true, channels: ["mobile_app_phone"], notification_count: 1, action_positions: ["0"], complexity: "niedrig", classification: "vollständig_migrierbar", migration_capable: true, risks: [], recommendation: "Native Regel als deaktivierter Beobachtungsmodus-Entwurf vorbereiten." }
+    ] } : { no_automatic_activation: true } };
+    element.source = JSON.stringify([{ id: "window_warning", alias: "Fensterwarnung" }]);
+    element.result = [{ automation_id: "window_warning", name: "Fensterwarnung", entity_id: "automation.window_warning", enabled: true, channels: ["mobile_app_phone"], notification_count: 1, complexity: "niedrig", classification: "vollständig_migrierbar", migration_capable: true, risks: [], recommendation: "Native Regel als deaktivierter Beobachtungsmodus-Entwurf vorbereiten." }];
+    element.render();
+  });
+</script></body></html>
