@@ -1,5 +1,13 @@
 # Changelog
 
+## Unveröffentlicht – Phase 9 in Entwicklung
+
+- Read-only-Erkennung von `notify.*`, `notify.send_message`, persistenten Benachrichtigungen, Mobile-App-Kanälen, TTS sowie verschachtelten `choose`-, `if`- und `repeat`-Sequenzen.
+- Deutsche Klassifizierung mit Risiken, fehlenden Entitäten, Kanälen, Positionen und begründetem Migrationsweg.
+- Vollständige Entwürfe bleiben deaktiviert und im Beobachtungsmodus; Hybridpläne ersetzen nur ausgewählte Benachrichtigungsaktionen und bewahren die übrige Automation.
+- Idempotente, neustartfeste externe Alarmreferenzen sowie atomare Vorbereitungs-, Konflikt-, Bestätigungs- und Rollback-Prüfung.
+- Keine Änderung bestehender Automationen, keine automatische Benachrichtigung, kein Release und kein Tag; 25 isolierte Phase-9-Regressionstests.
+
 ## Unveröffentlicht – Phase 8 abgeschlossen
 
 - 14 deutsche, entity-agnostische Regelvorlagen mit sicherem JSON-Import/Export.

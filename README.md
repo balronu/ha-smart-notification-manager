@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Entwicklungsstatus:** Phase 8 ist in `main` integriert. Vorlagenbibliothek, Regel-Assistent, schreibfreie Simulation und Versionshistorie sind abgeschlossen. Issue #24, die authentifizierte HA-Runtime-/Panel-E2E-Prüfung und Qualitäts-Gates #16–#19 bleiben vor der Beta offen.
+> **Entwicklungsstatus:** Phase 9 ist als Review-PR in Entwicklung. Der sichere, ausschließlich lesende Automationsassistent erkennt Benachrichtigungsaktionen, erstellt Vorschauen und deaktivierte Beobachtungsentwürfe; bestehende Automationen werden nicht verändert. Issue #24, die authentifizierte HA-Runtime-/Panel-E2E-Prüfung und Qualitäts-Gates #16–#19 bleiben vor der Beta offen.
 
 ## Ziel
 
@@ -32,6 +32,7 @@ Die Datenbank wird nicht automatisch in einer produktiven HA-Instanz angelegt. D
 - [Phase 6 – Alarmzentrale](docs/PHASE6_ALARM_CENTER.md)
 - [Phase 7 – Lovelace-Alarmkarte](docs/PHASE7_LOVELACE_CARD.md)
 - [Phase 8 – Vorlagen, Assistent und Simulation](docs/PHASE8_RULE_WIZARD_TEMPLATES.md)
+- [Phase 9 – Sicherer Automationsassistent](docs/PHASE9_AUTOMATION_MIGRATION.md)
 
 ## Phase-2-Ergebnis
 
