@@ -1,6 +1,6 @@
 # Changelog
 
-## Unveröffentlicht – Phase 4 in Entwicklung
+## Unveröffentlicht – Phase 4 abgeschlossen
 
 - Persistenter Alarm-Lifecycle mit eigener Alarm-ID pro auslösender Entity.
 - Pending-, Aktiv-, Entwarnungs-, Unterdrückungs-, Überfälligkeits- und manueller Abschlussstatus.
