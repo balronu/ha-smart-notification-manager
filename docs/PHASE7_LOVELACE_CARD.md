@@ -1,4 +1,4 @@
-# Phase 7 – Lovelace-Alarmkarte
+# Phase 7 – Lovelace-Alarmkarte (abgeschlossen)
 
 Phase 7 ergänzt die eigenständige Karte `custom:smart-notification-manager-card`.
 Sie liest ausschließlich über den authentifizierten Home-Assistant-WebSocket-
@@ -50,7 +50,7 @@ greifen nicht direkt auf SQLite zu.
 
 ## Nachweis und Einschränkungen
 
-`frontend/phase-7-lovelace-card-fixture.html` prüft kompakt, Liste, Detail und
+`frontend/phase-7-lovelace-card-fixture.html` prüft Kompakt, Liste, Detail und
 mehrere unabhängige Instanzen bei Desktop-/Tablet-/Smartphone-Breiten. Das ist
 ein isolierter Browser-Fixture-Nachweis, keine vollständige authentifizierte
 HA-Runtime-/Panel-E2E. Dieser Nachweis bleibt als Beta-Gate #16 offen.

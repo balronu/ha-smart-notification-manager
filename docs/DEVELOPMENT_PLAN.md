@@ -8,16 +8,14 @@
 | 4 | Alarm-Lifecycle, Quittierung und Eskalation | abgeschlossen: PR #21 in `main`, serverseitige Revalidierung, Teil-/Vollquittierung, Persistenz, Eskalationsschutz, 63 Tests und Main-CI grün; echte HA-Runtime-/Panel-E2E bleibt als Gate #16 offen |
 | 5 | Ruhezeiten, Pausen, Rate-Limits, Abhängigkeiten und Beobachtungsmodus | abgeschlossen: PR #23 in `main`, Policy-/Delivery-Integration, 74 Tests und Main-CI grün; automatische Wiederholungs-/Eskalationszustellung bleibt in Issue #24 offen |
 | 6 | Alarmzentrale, Kategorien, Filter, Gruppierung und Benutzerrechte | abgeschlossen: PR #26 in `main`, 79 Tests und Main-CI grün; Runtime-/Beta-Gates bleiben offen |
-| 7 | Lovelace-Alarmkarte, grafischer Karteneditor und native HA-Entitäten | responsive Browser-Fixtures, WS-only-Zugriff, stabile Unique-IDs |
+| 7 | Lovelace-Alarmkarte, grafischer Karteneditor und native HA-Entitäten | abgeschlossen: PR #28 in `main`, 85 Tests und Main-CI grün; Runtime-/Beta-Gates bleiben offen |
 | 8 | Audit, Diagnose, Historie, Statistiken | Fehler- und Retention-Gates |
 | 9 | Frontend API und erste Lovelace-Karte | responsive Fixture-UI |
 | 10 | zweite Lovelace-Karte, Simulation, Beobachtungsmodus | keine-Aktion-Garantie |
 | 11 | geführte Migration, Hybridbetrieb, Backup/Rollback | Pilot ohne Sicherheitsquellen |
 | 12 | HACS-/CI-/Release-Readiness und vollständige Integration | alle Gates, keine offenen Pflichttests |
 
-Phase 1 bis Phase 6 sind abgeschlossen und in `main` integriert. Phase 7 ist
-auf einem separaten Feature-Branch in Entwicklung; der PR ist noch nicht
-gemergt. Die
+Phase 1 bis Phase 7 sind abgeschlossen und in `main` integriert. Die
 automatische Zustellung von Alarmwiederholungen und Eskalationen ist als
 verbindlicher Beta-Vorbehalt in Issue #24 offen. Die vollständige
 authentifizierte Home-Assistant-HTTP-/WebSocket-/Panel-E2E-Prüfung bleibt in

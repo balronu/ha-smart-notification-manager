@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Entwicklungsstatus:** Phase 7 befindet sich auf dem Feature-Branch `feature/phase-7-lovelace-card` in Entwicklung. Die eigenständige Lovelace-Karte und native HA-Entitäten sind implementiert und werden vor dem PR-Abschluss isoliert getestet. Issue #24, die authentifizierte HA-Runtime-/Panel-E2E-Prüfung und Qualitäts-Gates #16–#19 bleiben vor der Beta offen.
+> **Entwicklungsstatus:** Phase 7 ist in `main` integriert. Die eigenständige Lovelace-Karte, native HA-Entitäten und dynamische Regel-Switch-Synchronisierung sind abgeschlossen. Issue #24, die authentifizierte HA-Runtime-/Panel-E2E-Prüfung und Qualitäts-Gates #16–#19 bleiben vor der Beta offen.
 
 ## Ziel
 
@@ -85,9 +85,9 @@ als verbindlicher Beta-Vorbehalt dokumentiert.
 
 ## Entwicklung
 
-### Phase 7 – in Entwicklung
+### Phase 7 – abgeschlossen
 
-Die eigenständige Karte `custom:smart-notification-manager-card` bietet die
+Die integrierte Karte `custom:smart-notification-manager-card` bietet die
 Ansichten Kompakt, Liste und Detail, unabhängige Filter pro Karteninstanz,
 deutsche Editorfelder, WebSocket-only-Datenzugriff und serverseitig geschützte
 Quittierung. Native Sensoren, Binärsensoren und Rule-Switches nutzen die

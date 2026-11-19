@@ -1,5 +1,13 @@
 # Changelog
 
+## Unveröffentlicht – Phase 7 abgeschlossen
+
+- PR #28 in `main` integriert; Lovelace-Karte, deutscher Editor und native HA-Entitäten sind verfügbar.
+- Dynamische Regel-Switch-Synchronisierung verarbeitet neue, geänderte und gelöschte Regeln mit Versionsschutz.
+- 85 Tests und Main-CI für Merge-Commit `5be52882d75356b3a2322c7dedf7d2461a537ab1` erfolgreich.
+- Authentifizierte HA-Runtime-/Panel-E2E sowie Gates #16–#19 und Issue #24 bleiben vor der Beta offen.
+- Kein Release und kein Tag.
+
 ## Unveröffentlicht – Phase 7 in Entwicklung
 
 - Eigenständige `custom:smart-notification-manager-card` mit Kompakt-, Listen- und Detailansicht.
