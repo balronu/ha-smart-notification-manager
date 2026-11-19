@@ -31,7 +31,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, websocket_save)
     websocket_api.async_register_command(hass, websocket_delete)
     websocket_api.async_register_command(hass, websocket_duplicate)
-    for handler in (websocket_recipient_list, websocket_recipient_save, websocket_group_save, websocket_channel_save, websocket_template_save, websocket_routing_preview, websocket_delivery_enqueue, websocket_delivery_list):
+    for handler in (websocket_recipient_list, websocket_recipient_save, websocket_group_save, websocket_channel_save, websocket_channel_group_save, websocket_template_save, websocket_routing_preview, websocket_delivery_enqueue, websocket_delivery_list):
         websocket_api.async_register_command(hass, handler)
     hass.data[DOMAIN]["websocket_registered"] = True
 
@@ -139,7 +139,7 @@ async def websocket_recipient_list(hass: HomeAssistant, connection, msg: dict[st
         store = _recipient_store(hass)
         recipients = [asdict(item) for item in await store.async_list_recipients()]
         groups = [asdict(item) for item in await store.async_list_groups()]
-        connection.send_result(msg["id"], {"recipients": recipients, "groups": groups, "channels": await store.async_list_channels()})
+        connection.send_result(msg["id"], {"recipients": recipients, "groups": groups, "channels": await store.async_list_channels(), "channel_groups": await store.async_list_channel_groups()})
     except (RuntimeError, sqlite3.Error) as err:
         _send_storage_error(connection, msg, err)
 
@@ -182,6 +182,19 @@ async def websocket_channel_save(hass: HomeAssistant, connection, msg: dict[str,
         connection.send_result(msg["id"], {"channel": saved})
     except (KeyError, TypeError, ValueError):
         connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Der Kanal ist ungültig.")
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_storage_error(connection, msg, err)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/channel-group/save", probatio.Required("group"): dict})
+@websocket_api.async_response
+async def websocket_channel_group_save(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        saved = await _recipient_store(hass).async_save_channel_group(msg["group"])
+        connection.send_result(msg["id"], {"group": saved})
+    except (KeyError, TypeError, ValueError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Kanalgruppe ist ungültig.")
     except (RuntimeError, sqlite3.Error) as err:
         _send_storage_error(connection, msg, err)
 

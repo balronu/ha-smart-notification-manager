@@ -1,4 +1,5 @@
 from inspect import signature
+from types import SimpleNamespace
 
 import pytest
 from homeassistant.components import panel_custom
@@ -49,6 +50,23 @@ async def test_lifecycle_does_not_initialize_sqlite(tmp_path):
     assert not database.exists()
     assert await async_unload_entry(hass, entry)
     assert not database.exists()
+
+
+@pytest.mark.asyncio
+async def test_real_home_assistant_core_lifecycle_isolated(tmp_path):
+    """Exercise the integration setup path with Home Assistant Core itself."""
+
+    from homeassistant.core import HomeAssistant
+
+    hass = HomeAssistant(str(tmp_path))
+    entry = SimpleNamespace(entry_id="isolated-entry", data={}, options={})
+    assert await async_setup(hass, {})
+    assert await async_setup_entry(hass, entry)
+    assert hass.data[DOMAIN]["delivery_store"] is not None
+    assert hass.data[DOMAIN]["recipient_store"] is not None
+    assert not hass.services.has_service(DOMAIN, "send")
+    assert await async_unload_entry(hass, entry)
+    await hass.async_stop()
 
 
 def test_panel_registration_uses_current_home_assistant_contract():

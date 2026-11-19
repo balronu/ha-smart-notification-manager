@@ -14,7 +14,7 @@ from smart_notification_manager.core.rules import (
     TriggerDefinition,
     TriggerKind,
 )
-from smart_notification_manager.websocket import websocket_recipient_save, websocket_save
+from smart_notification_manager.websocket import websocket_channel_group_save, websocket_recipient_save, websocket_save
 
 
 class Connection:
@@ -122,3 +122,18 @@ async def test_recipient_api_persists_devices_without_external_send(tmp_path):
     await handler(hass, connection, {"id": 6, "recipient": {"recipient_id": "michael", "display_name": "Michael", "devices": [{"device_id": "phone", "display_name": "Telefon", "channel_id": "mobile", "primary": True, "available": True}]}})
     assert connection.errors == []
     assert (await store.async_list_recipients())[0].devices[0].channel_id == "mobile"
+
+
+@pytest.mark.asyncio
+async def test_channel_group_api_round_trip(tmp_path):
+    store = RecipientStore(SQLiteRepository(tmp_path / "manager.sqlite3"))
+    hass = SimpleNamespace(data={DOMAIN: {"recipient_store": store}})
+    connection = Connection()
+    await implementation(websocket_channel_group_save)(
+        hass,
+        connection,
+        {"id": 7, "group": {"channel_group_id": "urgent", "display_name": "Dringend", "channel_ids": []}},
+    )
+    assert connection.errors == []
+    assert connection.results[-1][1]["group"]["display_name"] == "Dringend"
+    assert (await store.async_list_channel_groups())[0]["channel_group_id"] == "urgent"

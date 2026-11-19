@@ -14,6 +14,12 @@ Die Integration erfindet keine Anbieter-API und speichert keine Zugangsdaten.
 | FRITZ!Box-Klingeln | vorbereitet | vorhandener HA-Service | nur Klingelaktion, keine Sprache | Klingeln und TTS bleiben getrennt |
 | SIP/PBX-TTS | vorbereitet | vorhandener konfigurierter HA-Service | nur bei explizit gemeldeten Fähigkeiten | kein eingebauter SIP-Client |
 
+`Telegram`, `WhatsApp`, E-Mail und TTS sind damit **nicht pauschal als direkt
+implementiert** zu verstehen: Sie sind nur über einen vorhandenen und
+explizit konfigurierten HA-Service nutzbar. FRITZ!Box und SIP/PBX bleiben
+vorbereitet, solange kein kompatibler HA-Service in der Zielumgebung
+nachgewiesen ist.
+
 ## Sicherheitsgrenze
 
 `HAServiceAdapter` ruft ausschließlich einen vorhandenen HA-Service auf. Das

@@ -79,6 +79,33 @@ class RecipientStore:
 
         return await self.repository.async_run(operation)
 
+    async def async_list_channel_groups(self) -> list[dict[str, Any]]:
+        def operation(connection):
+            groups = []
+            for row in connection.execute("SELECT channel_group_id, display_name, enabled FROM channel_groups ORDER BY display_name COLLATE NOCASE"):
+                members = tuple(item[0] for item in connection.execute("SELECT channel_id FROM channel_group_members WHERE channel_group_id=? ORDER BY channel_id", (row[0],)))
+                groups.append({"channel_group_id": row[0], "display_name": row[1], "enabled": bool(row[2]), "channel_ids": members})
+            return groups
+
+        return await self.repository.async_run(operation)
+
+    async def async_save_channel_group(self, group: dict[str, Any]) -> dict[str, Any]:
+        required = {"channel_group_id", "display_name"}
+        if not required <= group.keys():
+            raise ValueError("Kanalgruppe benötigt ID und Anzeigename")
+        channel_ids = tuple(dict.fromkeys(group.get("channel_ids", [])))
+
+        def operation(connection):
+            connection.execute(
+                "INSERT INTO channel_groups(channel_group_id, display_name, enabled) VALUES (?, ?, ?) ON CONFLICT(channel_group_id) DO UPDATE SET display_name=excluded.display_name, enabled=excluded.enabled",
+                (group["channel_group_id"], group["display_name"], int(group.get("enabled", True))),
+            )
+            connection.execute("DELETE FROM channel_group_members WHERE channel_group_id=?", (group["channel_group_id"],))
+            connection.executemany("INSERT INTO channel_group_members(channel_group_id, channel_id) VALUES (?, ?)", [(group["channel_group_id"], channel_id) for channel_id in channel_ids])
+            return {**group, "enabled": bool(group.get("enabled", True)), "channel_ids": channel_ids}
+
+        return await self.repository.async_run(operation)
+
     async def async_save_template(self, template: dict[str, Any]) -> dict[str, Any]:
         validate_template(template.get("body", ""))
         now = datetime.now(UTC).isoformat()

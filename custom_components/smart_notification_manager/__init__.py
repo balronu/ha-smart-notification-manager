@@ -43,7 +43,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     runtime["delivery_store"] = DeliveryStore(SQLiteRepository(database_path))
     if hasattr(hass, "config"):
         async_register_websocket(hass)
-    if hasattr(hass, "http") and not runtime.get("frontend_registered"):
+    if getattr(hass, "http", None) is not None and not runtime.get("frontend_registered"):
         await hass.http.async_register_static_paths(
             [StaticPathConfig(f"{FRONTEND_URL_BASE}", str(FRONTEND_PATH), cache_headers=False)]
         )
