@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 
-CURRENT_SCHEMA_VERSION = 4
+CURRENT_SCHEMA_VERSION = 5
 
 
 def apply_migrations(connection: sqlite3.Connection) -> None:
@@ -34,6 +34,8 @@ def apply_migrations(connection: sqlite3.Connection) -> None:
                 _migration_v3(connection)
             elif next_version == 4:
                 _migration_v4(connection)
+            elif next_version == 5:
+                _migration_v5(connection)
             else:  # pragma: no cover - guarded by CURRENT_SCHEMA_VERSION
                 raise RuntimeError(f"missing migration {next_version}")
             connection.execute(f"PRAGMA user_version = {next_version}")
@@ -268,6 +270,22 @@ def _migration_v4(connection: sqlite3.Connection) -> None:
             ON alarm_instances(rule_id, cause_key)
             WHERE alarm_state IN ('pending', 'active', 'overdue');
         CREATE INDEX IF NOT EXISTS ix_alarm_state_due ON alarm_instances(alarm_state, pending_until, next_repeat_at, overdue_at);
+        """,
+    )
+
+
+def _migration_v5(connection: sqlite3.Connection) -> None:
+    """Pin the triggering rule and persist per-recipient acknowledgement policy."""
+
+    _execute_sql_statements(
+        connection,
+        """
+        ALTER TABLE alarm_instances ADD COLUMN rule_version INTEGER;
+        ALTER TABLE alarm_instances ADD COLUMN acknowledgement_mode TEXT NOT NULL DEFAULT 'any'
+            CHECK (acknowledgement_mode IN ('any', 'all_required'));
+        ALTER TABLE alarm_instances ADD COLUMN required_recipient_ids_json TEXT NOT NULL DEFAULT '[]';
+        CREATE INDEX IF NOT EXISTS ix_acknowledgements_alarm_user
+            ON acknowledgements(alarm_id, user_id);
         """,
     )
 

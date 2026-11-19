@@ -55,4 +55,4 @@ Alle Fremdschlüssel werden aktiviert. JSON-Felder bleiben an Integrationsgrenze
 
 ## Migration
 
-Migrationen sind additiv, versioniert über `PRAGMA user_version` und laufen transaktional. Phase 4 erweitert auf Schema v4. Eine Datenbank mit höherer Version wird abgelehnt. SQLite-Zugriffe laufen ausschließlich im Repository-Worker und nicht direkt im HA-Event-Loop.
+Migrationen sind additiv, versioniert über `PRAGMA user_version` und laufen transaktional. Phase 4 erweitert auf Schema v5: Die auslösende Regelversion sowie der Quittierungsmodus und die festgehaltenen erforderlichen Empfänger werden alarmbezogen gespeichert. Eine Datenbank mit höherer Version wird abgelehnt. SQLite-Zugriffe laufen ausschließlich im Repository-Worker und nicht direkt im HA-Event-Loop.

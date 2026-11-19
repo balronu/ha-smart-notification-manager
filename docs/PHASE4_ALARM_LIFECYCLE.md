@@ -16,7 +16,8 @@ noch den Alarmzustand. Critical-Alarme verlangen eine explizite Bestätigung.
 
 ## Persistenz
 
-Schema v4 speichert Alarmdaten, Zustandsänderungen, Quittierungen,
+Schema v5 speichert Alarmdaten, die auslösende Regelversion, Zustandsänderungen, Quittierungen,
+den Modus „eine Person“ oder „alle erforderlichen Empfänger“ und die beim Alarmstart deduplizierte Empfängermenge,
 Wiederholungszähler, nächste Wiederholung, Eskalationsstufe und Abschlussdaten.
 Alle Übergänge erzeugen einen Eintrag in `alarm_events`. Die partielle
 Unique-Constraint verhindert mehrere offene Vorgänge für dieselbe Regel und

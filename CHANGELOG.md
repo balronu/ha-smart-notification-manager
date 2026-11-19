@@ -8,6 +8,8 @@
 - Persistente Wiederholungs- und Eskalationsstufen ohne echte Versandaktion.
 - Responsive Alarmverwaltung mit Quittieren, Entwarnen, manuellem Abschluss und Ereignisansicht.
 - Schema-v4-Migration; Phase-3-Delivery-Retries bleiben technisch getrennt.
+- Schema-v5-Migration mit gepinnter Regelversion sowie persistenter Quittierung durch alle erforderlichen Empfänger.
+- Server-seitige Revalidierung von Auslösern und Bedingungen gegen aktuelle HA-Zustände; `unknown`/`unavailable` bleiben unklar.
 
 ## Unveröffentlicht – Phase 3 abgeschlossen
 

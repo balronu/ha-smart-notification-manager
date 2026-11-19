@@ -23,6 +23,8 @@ class AlarmPolicy:
     repeat_only_unacknowledged: bool = False
     max_duration_seconds: int = 0
     escalation_stages: tuple[dict[str, Any], ...] = ()
+    acknowledgement_mode: str = "any"
+    required_recipient_ids: tuple[str, ...] = ()
 
     def validate(self) -> None:
         for name in ("delay_seconds", "repeat_interval_seconds", "max_repeats", "max_duration_seconds"):
@@ -31,6 +33,10 @@ class AlarmPolicy:
                 raise ValueError(f"{name} must be a non-negative integer")
         if any(not isinstance(stage, dict) for stage in self.escalation_stages):
             raise ValueError("escalation stages must be objects")
+        if self.acknowledgement_mode not in {"any", "all_required"}:
+            raise ValueError("acknowledgement_mode must be any or all_required")
+        if self.acknowledgement_mode == "all_required" and not self.required_recipient_ids:
+            raise ValueError("all_required acknowledgement needs recipients")
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,6 +74,9 @@ class AlarmRecord:
     max_duration_seconds: int
     escalation_stages: tuple[dict[str, Any], ...]
     parent_alarm_id: str | None = None
+    rule_version: int | None = None
+    acknowledgement_mode: str = "any"
+    required_recipient_ids: tuple[str, ...] = ()
 
 
 def _iso(value: datetime | None) -> str | None:
@@ -91,7 +100,35 @@ def _record(row) -> AlarmRecord:
         repeat_interval_seconds=int(row["repeat_interval_seconds"]), max_repeats=int(row["max_repeats"]), repeat_count=int(row["repeat_count"]),
         next_repeat_at=_dt(row["next_repeat_at"]), max_duration_seconds=int(row["max_duration_seconds"]),
         escalation_stages=tuple(json.loads(row["escalation_json"] or "[]")), parent_alarm_id=row["parent_alarm_id"],
+        rule_version=row["rule_version"], acknowledgement_mode=row["acknowledgement_mode"],
+        required_recipient_ids=tuple(json.loads(row["required_recipient_ids_json"] or "[]")),
     )
+
+
+def _acknowledgement_complete(connection, row, *, pending_user_id: str | None = None) -> bool:
+    """Return whether the persisted acknowledgement policy is satisfied."""
+
+    if row["acknowledgement_mode"] != "all_required":
+        return pending_user_id is not None or row["acknowledgement_state"] == "acknowledged"
+    required = set(json.loads(row["required_recipient_ids_json"] or "[]"))
+    if pending_user_id:
+        acknowledged = {
+            item[0]
+            for item in connection.execute(
+                "SELECT DISTINCT user_id FROM acknowledgements WHERE alarm_id=?",
+                (row["alarm_id"],),
+            )
+        }
+        acknowledged.add(pending_user_id)
+    else:
+        acknowledged = {
+            item[0]
+            for item in connection.execute(
+                "SELECT DISTINCT user_id FROM acknowledgements WHERE alarm_id=?",
+                (row["alarm_id"],),
+            )
+        }
+    return required.issubset(acknowledged)
 
 
 class AlarmLifecycleStore:
@@ -103,7 +140,7 @@ class AlarmLifecycleStore:
     async def async_trigger(self, *, rule_id: str, entity_id: str, friendly_name: str = "", area_id: str | None = None,
                             area_name: str | None = None, priority: str = "normal", previous_state: str | None = None,
                             current_state: str | None = None, now: datetime, policy: AlarmPolicy | None = None,
-                            parent_alarm_id: str | None = None) -> tuple[AlarmRecord, bool]:
+                            parent_alarm_id: str | None = None, rule_version: int | None = None) -> tuple[AlarmRecord, bool]:
         ensure_aware(now); policy = policy or AlarmPolicy(); policy.validate()
         if not entity_id or not rule_id: raise ValueError("rule_id and entity_id are required")
         pending_until = now + timedelta(seconds=policy.delay_seconds) if policy.delay_seconds else None
@@ -114,7 +151,7 @@ class AlarmLifecycleStore:
             existing = connection.execute("SELECT * FROM alarm_instances WHERE rule_id=? AND cause_key=? AND alarm_state IN ('pending','active','overdue')", (rule_id, entity_id)).fetchone()
             if existing: return _record(existing), False
             alarm_id = new_id(); stamp = now.isoformat()
-            connection.execute("""INSERT INTO alarm_instances(alarm_id,rule_id,cause_key,alarm_state,acknowledgement_state,delivery_state,escalation_state,started_at,entity_id,friendly_name,area_id,area_name,priority,previous_state,current_state,pending_until,updated_at,repeat_interval_seconds,max_repeats,next_repeat_at,repeat_only_unacknowledged,max_duration_seconds,escalation_json,parent_alarm_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (alarm_id,rule_id,entity_id,state,"unacknowledged","pending","running" if policy.escalation_stages else "idle",stamp,entity_id,friendly_name,area_id,area_name,priority,previous_state,current_state,_iso(pending_until),stamp,policy.repeat_interval_seconds,policy.max_repeats,_iso(next_repeat),int(policy.repeat_only_unacknowledged),policy.max_duration_seconds,json.dumps(policy.escalation_stages, ensure_ascii=False),parent_alarm_id))
+            connection.execute("""INSERT INTO alarm_instances(alarm_id,rule_id,rule_version,cause_key,alarm_state,acknowledgement_state,acknowledgement_mode,required_recipient_ids_json,delivery_state,escalation_state,started_at,entity_id,friendly_name,area_id,area_name,priority,previous_state,current_state,pending_until,updated_at,repeat_interval_seconds,max_repeats,next_repeat_at,repeat_only_unacknowledged,max_duration_seconds,escalation_json,parent_alarm_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (alarm_id,rule_id,rule_version,entity_id,state,"unacknowledged",policy.acknowledgement_mode,json.dumps(sorted(set(policy.required_recipient_ids))),"pending","running" if policy.escalation_stages else "idle",stamp,entity_id,friendly_name,area_id,area_name,priority,previous_state,current_state,_iso(pending_until),stamp,policy.repeat_interval_seconds,policy.max_repeats,_iso(next_repeat),int(policy.repeat_only_unacknowledged),policy.max_duration_seconds,json.dumps(policy.escalation_stages, ensure_ascii=False),parent_alarm_id))
             self._event(connection, alarm_id, "triggered", {"entity_id": entity_id, "state": state}, now)
             return _record(connection.execute("SELECT * FROM alarm_instances WHERE alarm_id=?", (alarm_id,)).fetchone()), True
         return await self.repository.async_run(operation)
@@ -191,7 +228,7 @@ class AlarmLifecycleStore:
             rows = connection.execute("SELECT * FROM alarm_instances WHERE alarm_state IN ('active','overdue') AND escalation_state='running'").fetchall(); result = []
             for row in rows:
                 stages = tuple(json.loads(row["escalation_json"] or "[]")); level = int(row["escalation_level"])
-                if row["acknowledgement_state"] == "acknowledged":
+                if _acknowledgement_complete(connection, row):
                     connection.execute("UPDATE alarm_instances SET escalation_state='complete',updated_at=? WHERE alarm_id=? AND escalation_level=?", (now.isoformat(), row["alarm_id"], level))
                     continue
                 if level >= len(stages):
@@ -218,7 +255,14 @@ class AlarmLifecycleStore:
             if not row: raise ValueError("alarm not found")
             if row["priority"] == "critical" and not critical_confirmed: raise PermissionError("critical acknowledgement requires confirmation")
             if row["alarm_state"] not in RESOLVABLE_STATES and row["alarm_state"] != "active": raise ValueError("alarm cannot be acknowledged in this state")
-            connection.execute("UPDATE alarm_instances SET acknowledgement_state='acknowledged',acknowledged_by=?,acknowledged_at=?,acknowledgement_scope=?,critical_confirmed=?,updated_at=? WHERE alarm_id=?", (user_id,now.isoformat(),scope,int(critical_confirmed),now.isoformat(),alarm_id)); connection.execute("INSERT INTO acknowledgements(acknowledgement_id,alarm_id,user_id,acknowledged_at,scope,critical_confirmed) VALUES (?,?,?,?,?,?)", (new_id(),alarm_id,user_id,now.isoformat(),scope,int(critical_confirmed))); self._event(connection,alarm_id,"acknowledged",{"user_id":user_id,"scope":scope},now); return _record(connection.execute("SELECT * FROM alarm_instances WHERE alarm_id=?",(alarm_id,)).fetchone())
+            if row["acknowledgement_mode"] == "all_required" and user_id not in set(json.loads(row["required_recipient_ids_json"] or "[]")):
+                raise PermissionError("user is not a required recipient")
+            connection.execute("INSERT INTO acknowledgements(acknowledgement_id,alarm_id,user_id,acknowledged_at,scope,critical_confirmed) VALUES (?,?,?,?,?,?)", (new_id(),alarm_id,user_id,now.isoformat(),scope,int(critical_confirmed)))
+            complete = _acknowledgement_complete(connection, row, pending_user_id=user_id)
+            state = "acknowledged" if complete else "partially_acknowledged"
+            connection.execute("UPDATE alarm_instances SET acknowledgement_state=?,acknowledged_by=?,acknowledged_at=?,acknowledgement_scope=?,critical_confirmed=?,updated_at=? WHERE alarm_id=?", (state,user_id,now.isoformat(),scope,int(critical_confirmed),now.isoformat(),alarm_id))
+            self._event(connection,alarm_id,"acknowledged",{"user_id":user_id,"scope":scope,"complete":complete},now)
+            return _record(connection.execute("SELECT * FROM alarm_instances WHERE alarm_id=?",(alarm_id,)).fetchone())
         return await self.repository.async_run(operation)
 
     async def async_acknowledge_many(self, alarm_ids: list[str], **kwargs) -> list[AlarmRecord]:
@@ -231,10 +275,13 @@ class AlarmLifecycleStore:
             if len(rows) != len(unique_ids): raise ValueError("one or more alarms not found")
             if any(row["alarm_state"] not in RESOLVABLE_STATES for row in rows): raise ValueError("one or more alarms cannot be acknowledged")
             if any(row["priority"] == "critical" for row in rows) and not critical_confirmed: raise PermissionError("critical acknowledgement requires confirmation")
+            if any(row["acknowledgement_mode"] == "all_required" and user_id not in set(json.loads(row["required_recipient_ids_json"] or "[]")) for row in rows):
+                raise PermissionError("user is not a required recipient")
             for row in rows:
-                connection.execute("UPDATE alarm_instances SET acknowledgement_state='acknowledged',acknowledged_by=?,acknowledged_at=?,acknowledgement_scope=?,critical_confirmed=?,updated_at=? WHERE alarm_id=?", (user_id, now.isoformat(), scope, int(critical_confirmed), now.isoformat(), row["alarm_id"]))
                 connection.execute("INSERT INTO acknowledgements(acknowledgement_id,alarm_id,user_id,acknowledged_at,scope,critical_confirmed) VALUES (?,?,?,?,?,?)", (new_id(), row["alarm_id"], user_id, now.isoformat(), scope, int(critical_confirmed)))
-                self._event(connection, row["alarm_id"], "acknowledged", {"user_id": user_id, "scope": scope}, now)
+                complete = _acknowledgement_complete(connection, row, pending_user_id=user_id)
+                connection.execute("UPDATE alarm_instances SET acknowledgement_state=?,acknowledged_by=?,acknowledged_at=?,acknowledgement_scope=?,critical_confirmed=?,updated_at=? WHERE alarm_id=?", ("acknowledged" if complete else "partially_acknowledged", user_id, now.isoformat(), scope, int(critical_confirmed), now.isoformat(), row["alarm_id"]))
+                self._event(connection, row["alarm_id"], "acknowledged", {"user_id": user_id, "scope": scope, "complete": complete}, now)
             return [_record(connection.execute("SELECT * FROM alarm_instances WHERE alarm_id=?", (alarm_id,)).fetchone()) for alarm_id in unique_ids]
         return await self.repository.async_run(operation)
 

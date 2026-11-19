@@ -19,6 +19,7 @@ from .core.delivery_store import DeliveryStore
 from .core.entity_catalog import list_entity_snapshots
 from .core.recipient_store import RecipientStore
 from .core.recipients import Recipient, RecipientDevice, RecipientGroup
+from .core.revalidation import revalidate_alarm
 from .core.rule_store import EditorAccess, RuleStore, rule_from_editor_payload, rule_to_dict
 
 _LOGGER = logging.getLogger(__name__)
@@ -343,11 +344,13 @@ async def websocket_alarm_trigger(hass: HomeAssistant, connection, msg: dict[str
             repeat_only_unacknowledged=bool(value.get("repeat_only_unacknowledged", False)),
             max_duration_seconds=int(value.get("max_duration_seconds", 0)),
             escalation_stages=tuple(value.get("escalation_stages", ())),
+            acknowledgement_mode=str(value.get("acknowledgement_mode", "any")),
+            required_recipient_ids=tuple(str(item) for item in value.get("required_recipient_ids", ())),
         )
         alarm, created = await _alarm_store(hass).async_trigger(
             rule_id=value["rule_id"], entity_id=value["entity_id"], friendly_name=str(value.get("friendly_name", "")),
             area_id=value.get("area_id"), area_name=value.get("area_name"), priority=str(value.get("priority", "normal")),
-            previous_state=value.get("previous_state"), current_state=value.get("current_state"), now=datetime.fromisoformat(value["now"]) if value.get("now") else datetime.now(UTC), policy=policy,
+            previous_state=value.get("previous_state"), current_state=value.get("current_state"), now=datetime.fromisoformat(value["now"]) if value.get("now") else datetime.now(UTC), policy=policy, rule_version=value.get("rule_version"),
         )
         connection.send_result(msg["id"], {"alarm": alarm_to_dict(alarm), "created": created})
     except (KeyError, TypeError, ValueError, PermissionError):
@@ -403,12 +406,18 @@ async def websocket_alarm_acknowledge_many(hass: HomeAssistant, connection, msg:
 @websocket_api.async_response
 async def websocket_alarm_resolve(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     try:
-        current = await _alarm_store(hass).async_get(msg["alarm_id"])
+        alarm_store = _alarm_store(hass)
+        current = await alarm_store.async_get(msg["alarm_id"])
         if current is None:
             raise ValueError("alarm not found")
-        state = hass.states.get(current.entity_id) if getattr(hass, "states", None) is not None else None
-        actual_state = getattr(state, "state", None)
-        alarm = await _alarm_store(hass).async_resolve(msg["alarm_id"], now=datetime.now(UTC), actual_state=actual_state, expected_active_state=current.current_state, available=actual_state not in {None, "unknown", "unavailable"})
+        rule = await _store(hass).async_get(current.rule_id, version=current.rule_version)
+        if rule is None:
+            raise ValueError("original rule not found")
+        now = datetime.now(UTC)
+        result = revalidate_alarm(hass, rule, current, now)
+        if not result.safe_to_resolve:
+            raise ValueError(result.reason)
+        alarm = await alarm_store.async_resolve(msg["alarm_id"], now=now, actual_state=getattr(hass.states.get(current.entity_id), "state", None), expected_active_state=current.current_state, available=True)
         connection.send_result(msg["id"], {"alarm": alarm_to_dict(alarm)})
     except (KeyError, TypeError, ValueError):
         connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Entwarnung ist für diesen Alarm nicht zulässig.")
