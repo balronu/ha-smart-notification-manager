@@ -20,13 +20,16 @@ Der Entwurf bleibt beim Schrittwechsel erhalten und wird über den bestehenden
 authentifizierten Regel-WebSocket validiert.
 
 `smart_notification_manager/phase8/simulate` wertet einen Entwurf mit
-vorgegebenen Zuständen und Policy-Gründen aus. Die Simulation schreibt weder
+vorgegebenen Zuständen über dieselbe schreibfreie Policy-Entscheidung wie der
+Delivery-Pfad aus. Rate-Limit-Kapazität, Abhängigkeiten, Ruhezeiten, Pausen,
+Beobachtungsmodus und Critical-Ausnahmen werden dabei berücksichtigt. Die Simulation schreibt weder
 Alarm-, Delivery-, Rate-Limit- noch Auditdaten. Phase 8 führt keine realen
 Testnachrichten, Anrufe oder TTS-Ausgaben aus.
 
 ## Versionen und Grenzen
 
-Die letzten 20 Versionen werden angezeigt. Eine Wiederherstellung erzeugt
+Die letzten 20 Versionen werden angezeigt. Eine Wiederherstellung verlangt die
+aktuelle erwartete Versionsnummer, prüft sie atomar und erzeugt
 immer eine neue Version, überschreibt keine Historie und verlangt bei
 Critical-Regeln eine ausdrückliche Bestätigung.
 

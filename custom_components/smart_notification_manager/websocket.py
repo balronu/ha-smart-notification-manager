@@ -807,7 +807,7 @@ async def websocket_phase8_versions(hass: HomeAssistant, connection, msg: dict[s
 
 
 @websocket_api.require_admin
-@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/phase8/restore", probatio.Required("rule_id"): str, probatio.Required("version"): int})
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/phase8/restore", probatio.Required("rule_id"): str, probatio.Required("version"): int, probatio.Required("expected_version"): int})
 @websocket_api.async_response
 async def websocket_phase8_restore(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     try:
@@ -816,6 +816,8 @@ async def websocket_phase8_restore(hass: HomeAssistant, connection, msg: dict[st
             version=msg["version"],
             access=EditorAccess(_user_id(connection), frozenset({"admin"})),
             now=datetime.now(UTC),
+            expected_version=msg["expected_version"],
+            available_entities=_available_entity_ids(hass),
             reason=str(msg.get("reason", "")),
             critical_confirmed=bool(msg.get("critical_confirmed", False)),
         )
@@ -840,6 +842,16 @@ def _template_store(hass: HomeAssistant) -> RuleTemplateStore:
     if store is None:
         raise RuntimeError("Smart Notification Manager is not configured")
     return store
+
+
+def _available_entity_ids(hass: HomeAssistant) -> set[str] | None:
+    states = getattr(hass, "states", None)
+    if states is None:
+        return None
+    async_all = getattr(states, "async_all", None)
+    if callable(async_all):
+        return {state.entity_id for state in async_all()}
+    return None
 
 
 def _delivery_store(hass: HomeAssistant) -> DeliveryStore:

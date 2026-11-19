@@ -101,6 +101,14 @@ class PolicyDecision:
     observation: bool = False
 
 
+@dataclass(frozen=True, slots=True)
+class PolicyPreview:
+    """Read-only result of the same policy checks used for delivery."""
+
+    decision: PolicyDecision
+    remaining_capacity: int | None = None
+
+
 def quiet_hours_active(quiet: QuietHours, now: datetime, *, rule_id: str, priority: str) -> bool:
     quiet.validate()
     if not quiet.enabled or rule_id in quiet.rule_exceptions or priority in quiet.priority_exceptions:
@@ -208,6 +216,39 @@ class PolicyStore:
                 return self._record(connection, rule_id, request.get("alarm_id"), "suppress", "rate_limit", "Das Rate-Limit ist erreicht.", now)
             connection.execute("INSERT INTO rate_limit_events(event_id,rule_id,alarm_id,occurred_at,kind) VALUES (?,?,?,?,?)", (new_id(), rule_id, request.get("alarm_id"), now.isoformat(), "notification"))
         return self._record(connection, rule_id, request.get("alarm_id"), "allow", "allowed", "Benachrichtigung darf an das Delivery-System übergeben werden.", now)
+
+    def preview_in_connection(self, connection, request: dict, *, now: datetime) -> PolicyPreview:
+        """Evaluate policy without recording a decision or reserving capacity."""
+        ensure_aware(now)
+        rule_id = request["rule_id"]
+        priority = request.get("priority", "normal")
+        if request.get("alarm_state") not in {"active", "pending", "overdue"}:
+            return PolicyPreview(PolicyDecision("suppress", "alarm_not_active", "Alarm ist nicht aktiv."), 0)
+        if not request.get("rule_enabled", True):
+            return PolicyPreview(PolicyDecision("suppress", "rule_disabled", "Die Regel ist deaktiviert."), 0)
+        observation = connection.execute("SELECT enabled,critical_confirmed FROM observation_modes WHERE rule_id=?", (rule_id,)).fetchone()
+        if observation and observation[0]:
+            if priority == "critical" and not observation[1]:
+                return PolicyPreview(PolicyDecision("suppress", "critical_confirmation_required", "Critical benötigt eine zusätzliche Beobachtungsmodus-Bestätigung."), 0)
+            return PolicyPreview(PolicyDecision("observe", "observation_mode", "Beobachtungsmodus: hypothetischer Versand, keine Zustellung.", True), None)
+        if self._paused(connection, request, now) and priority != "critical":
+            return PolicyPreview(PolicyDecision("suppress", "paused", "Die Benachrichtigung ist pausiert."), 0)
+        for row in connection.execute("SELECT weekdays_json,start_time,end_time,timezone,rule_exceptions_json,priority_exceptions_json FROM quiet_hours WHERE enabled=1"):
+            quiet = QuietHours("preview", "preview", True, tuple(json.loads(row[0])), row[1], row[2], row[3], tuple(json.loads(row[4])), tuple(json.loads(row[5])))
+            if quiet_hours_active(quiet, now, rule_id=rule_id, priority=priority):
+                return PolicyPreview(PolicyDecision("suppress", "quiet_hours", "Ruhezeit ist aktiv."), 0)
+        for dependency in connection.execute("SELECT depends_on_rule_id,expected_state FROM rule_dependencies WHERE rule_id=? AND enabled=1", (rule_id,)):
+            if self._current_dependency_state(connection, dependency[0]) != dependency[1]:
+                return PolicyPreview(PolicyDecision("suppress", "dependency_not_met", "Eine Regelabhängigkeit ist nicht erfüllt oder unklar."), 0)
+        limit = connection.execute("SELECT window_seconds,max_notifications,critical_exempt FROM rate_limit_policies WHERE rule_id=? AND enabled=1", (rule_id,)).fetchone()
+        if limit and not (priority == "critical" and limit[2]):
+            cutoff = (now - timedelta(seconds=limit[0])).isoformat()
+            count = connection.execute("SELECT COUNT(*) FROM rate_limit_events WHERE rule_id=? AND occurred_at>=? AND kind='notification'", (rule_id, cutoff)).fetchone()[0]
+            remaining = max(0, limit[1] - count)
+            if remaining == 0:
+                return PolicyPreview(PolicyDecision("suppress", "rate_limit", "Das Rate-Limit ist erreicht."), 0)
+            return PolicyPreview(PolicyDecision("allow", "allowed", "Benachrichtigung darf an das Delivery-System übergeben werden."), remaining)
+        return PolicyPreview(PolicyDecision("allow", "allowed", "Benachrichtigung darf an das Delivery-System übergeben werden."), None)
 
     @staticmethod
     def _current_dependency_state(connection, rule_id: str) -> str:

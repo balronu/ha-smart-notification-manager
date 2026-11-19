@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from .evaluator import EvaluationContext, evaluate_condition, evaluate_numeric_trigger, evaluate_state_trigger
-from .policies import quiet_hours_active
+from .policies import PolicyStore
 from .rule_store import rule_from_editor_payload
 
 
@@ -21,6 +20,14 @@ def simulate_rule(value: dict[str, Any], *, states: dict[str, Any] | None = None
     raw_states = states or {}
     numeric = numeric_states or {}
     presence_values = presence or {}
+    required_entities = {entity_id for trigger in rule.triggers for entity_id in trigger.entity_ids}
+    required_entities.update(
+        child.value["entity_id"]
+        for child in _condition_nodes(rule.conditions)
+        if isinstance(child.value, dict) and child.value.get("entity_id")
+    )
+    supplied_entities = set(raw_states) | set(numeric) | set(presence_values)
+    data_complete = required_entities <= supplied_entities
     trigger_results = []
     for trigger in rule.triggers:
         matched = False
@@ -38,34 +45,37 @@ def simulate_rule(value: dict[str, Any], *, states: dict[str, Any] | None = None
     conditions = evaluate_condition(rule.conditions, EvaluationContext({key: (item.get("after", item.get("state")) if isinstance(item, dict) else item) for key, item in raw_states.items()}, numeric, presence_values, timestamp))
     reasons = list(policy_reasons or [])
     suppressed = next((item for item in reasons if item.get("action") in {"suppress", "observe"}), None)
-    would_trigger = bool(trigger_results and any(item["matched"] for item in trigger_results) and conditions)
+    would_trigger = bool(data_complete and trigger_results and any(item["matched"] for item in trigger_results) and conditions)
     if suppressed:
         would_send = False
         delivery_reason = suppressed.get("reason_de", suppressed["reason"])
+    elif not data_complete:
+        would_send = False
+        delivery_reason = "Nicht sicher bestimmbar: Zustandsdaten fehlen."
     else:
         would_send = would_trigger
         delivery_reason = "Zustellung wäre möglich." if would_trigger else "Auslöser oder Bedingungen sind nicht erfüllt."
-    return {"would_trigger": would_trigger, "would_send": would_send, "trigger_results": trigger_results, "conditions_met": conditions, "delivery_reason": delivery_reason, "policy_reasons": reasons, "affected_entities": [entity_id for trigger in rule.triggers for entity_id in trigger.entity_ids], "recipients": rule.routing.get("recipient_ids", []), "channels": rule.routing.get("channel_ids", []), "earliest_delivery": timestamp.isoformat() if would_send else None, "repeat_plan": value.get("repeat", {}), "escalation_plan": value.get("escalation", {})}
+    delay = max((trigger.delay_seconds for trigger in rule.triggers), default=0)
+    earliest = timestamp + timedelta(seconds=delay) if would_send else None
+    return {"would_trigger": would_trigger, "would_send": would_send, "data_complete": data_complete, "trigger_results": trigger_results, "conditions_met": conditions, "delivery_reason": delivery_reason, "policy_reasons": reasons, "affected_entities": [entity_id for trigger in rule.triggers for entity_id in trigger.entity_ids], "recipients": rule.routing.get("recipient_ids", []), "channels": rule.routing.get("channel_ids", []), "earliest_delivery": earliest.isoformat() if earliest else None, "repeat_plan": value.get("repeat", {}), "escalation_plan": value.get("escalation", {})}
 
 
 async def async_policy_preview(repository, *, rule_id: str, priority: str, now: datetime, alarm_state: str = "active", category: str | None = None, entity_id: str | None = None) -> list[dict[str, str]]:
-    """Read policy tables without invoking the mutating PolicyStore decision."""
+    """Read the central policy decision without recording or reserving anything."""
+    preview = await repository.async_run(
+        lambda connection: PolicyStore(repository).preview_in_connection(
+            connection,
+            {"rule_id": rule_id, "priority": priority, "alarm_state": alarm_state, "category": category, "entity_id": entity_id},
+            now=now,
+        )
+    )
+    reason = {"action": preview.decision.action, "reason": preview.decision.reason_code, "reason_de": preview.decision.reason_de}
+    if preview.remaining_capacity is not None:
+        reason["remaining_capacity"] = str(preview.remaining_capacity)
+    return [reason]
 
-    def operation(connection):
-        reasons: list[dict[str, str]] = []
-        if alarm_state not in {"active", "pending", "overdue"}:
-            reasons.append({"action": "suppress", "reason": "alarm_not_active", "reason_de": "Alarm ist nicht aktiv."})
-        observation = connection.execute("SELECT enabled,critical_confirmed FROM observation_modes WHERE rule_id=?", (rule_id,)).fetchone()
-        if observation and observation[0]:
-            reasons.append({"action": "observe", "reason": "observation_mode", "reason_de": "Beobachtungsmodus: keine Zustellung."})
-        for row in connection.execute("SELECT weekdays_json,start_time,end_time,timezone,rule_exceptions_json,priority_exceptions_json FROM quiet_hours WHERE enabled=1"):
-            from .policies import QuietHours
-            quiet = QuietHours("preview", "preview", True, tuple(json.loads(row[0])), row[1], row[2], row[3], tuple(json.loads(row[4])), tuple(json.loads(row[5])))
-            if quiet_hours_active(quiet, now, rule_id=rule_id, priority=priority):
-                reasons.append({"action": "suppress", "reason": "quiet_hours", "reason_de": "Ruhezeit ist aktiv."})
-        for row in connection.execute("SELECT scope_type,scope_id,starts_at,ends_at FROM notification_pauses WHERE active=1"):
-            if datetime.fromisoformat(row[2]) <= now and (not row[3] or datetime.fromisoformat(row[3]) > now) and (row[0] == "global" or (row[0] == "rule" and row[1] == rule_id) or (row[0] == "category" and row[1] == category) or (row[0] == "entity" and row[1] == entity_id)) and priority != "critical":
-                reasons.append({"action": "suppress", "reason": "paused", "reason_de": "Die Benachrichtigung ist pausiert."})
-        return reasons
 
-    return await repository.async_run(operation)
+def _condition_nodes(node):
+    yield node
+    for child in node.children:
+        yield from _condition_nodes(child)
