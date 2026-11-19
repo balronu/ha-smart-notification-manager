@@ -15,7 +15,9 @@ jobs:
           version: latest
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.14.2"
+          # Use the maintained 3.14 channel; hosted runners may not publish
+          # every individual patch version.
+          python-version: "3.14"
       - run: uv sync --extra test
       - run: uv run pytest
       - run: uv run ruff check .
