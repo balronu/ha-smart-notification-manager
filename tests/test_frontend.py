@@ -25,6 +25,8 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert "smart_notification_manager/alarm/acknowledge" in source
     assert "smart_notification_manager/alarm/resolve" in source
     assert "smart_notification_manager/alarm/close" in source
+    assert "smart_notification_manager/alarm/acknowledge_many" in source
+    assert "Auswahl quittieren" in source
     assert (FRONTEND.parent / "phase-3-fixture.html").exists()
     assert (FRONTEND.parent / "phase-3-live-fixture.html").exists()
     assert (FRONTEND.parent / "phase-4-alarm-fixture.html").exists()
