@@ -9,9 +9,12 @@ from uuid import UUID, uuid4
 
 
 class AlarmState(StrEnum):
+    PENDING = "pending"
     ACTIVE = "active"
-    ACKNOWLEDGED = "acknowledged"
     RESOLVED = "resolved"
+    SUPPRESSED = "suppressed"
+    OVERDUE = "overdue"
+    MANUALLY_CLOSED = "manually_closed"
 
 
 class DeliveryState(StrEnum):
@@ -74,4 +77,3 @@ def ensure_aware(value: datetime) -> datetime:
     if value.tzinfo is None or value.utcoffset() is None:
         raise ValueError("timestamps must be timezone-aware")
     return value
-

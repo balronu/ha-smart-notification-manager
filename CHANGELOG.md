@@ -1,5 +1,14 @@
 # Changelog
 
+## Unveröffentlicht – Phase 4 in Entwicklung
+
+- Persistenter Alarm-Lifecycle mit eigener Alarm-ID pro auslösender Entity.
+- Pending-, Aktiv-, Entwarnungs-, Unterdrückungs-, Überfälligkeits- und manueller Abschlussstatus.
+- Quittierung, Sammelquittierung über API-Verträge, Critical-Bestätigung und Ereignishistorie.
+- Persistente Wiederholungs- und Eskalationsstufen ohne echte Versandaktion.
+- Responsive Alarmverwaltung mit Quittieren, Entwarnen, manuellem Abschluss und Ereignisansicht.
+- Schema-v4-Migration; Phase-3-Delivery-Retries bleiben technisch getrennt.
+
 ## Unveröffentlicht – Phase 3 abgeschlossen
 
 - Empfänger mit mehreren Geräten, Primärgerät, Verfügbarkeit und Gruppenmitgliedschaften.

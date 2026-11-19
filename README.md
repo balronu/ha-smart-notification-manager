@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Entwicklungsstatus:** Phase 3 von 12 abgeschlossen und in `main` integriert. Die vollständige authentifizierte Home-Assistant-HTTP-/WebSocket-/Panel-E2E-Prüfung sowie Qualitäts-Gates #16–#19 bleiben vorläufige Beta-Blocker.
+> **Entwicklungsstatus:** Phase 4 von 12 in Entwicklung. Phase 3 ist in `main` integriert; der Alarm-Lifecycle arbeitet ausschließlich mit simulierten Versandadaptern. Qualitäts-Gates #16–#19 bleiben vorläufige Beta-Blocker.
 
 ## Ziel
 
@@ -58,6 +58,16 @@ Der technische Versand-Lifecycle mit Idempotenz, Lease-Schutz und begrenztem
 Backoff ist vorbereitet. Reale HA-Service-Adapter verwenden ausschließlich
 konfigurierte Home-Assistant-Dienste und benötigen eine explizite Freigabe;
 automatischer Echtversand ist in dieser Entwicklungsphase gesperrt.
+
+## Phase-4-Zwischenstand
+
+Der persistente Alarm-Lifecycle unterstützt unabhängige Alarmvorgänge je
+auslösender Entity, Pending/Active/Resolved/Suppressed/Overdue/Manually-Closed,
+Quittierung mit Critical-Bestätigung, Entwarnung, Wiederholungszähler,
+Eskalationsstufen und chronologische Ereignisse. Die Alarmverwaltung ist über
+geschützte WebSocket-Kommandos und eine responsive deutsche Oberfläche
+erreichbar. Eine vollständige HA-Runtime-/Panel-E2E-Prüfung sowie echte
+Versandaktionen sind weiterhin nicht freigegeben.
 
 ## Entwicklung
 

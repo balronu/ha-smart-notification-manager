@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 from smart_notification_manager.const import DOMAIN
+from smart_notification_manager.core.alarm_lifecycle import AlarmLifecycleStore
 from smart_notification_manager.core.recipient_store import RecipientStore
 from smart_notification_manager.core.repository import SQLiteRepository
 from smart_notification_manager.core.rule_store import EditorAccess, RuleStore, rule_to_dict
@@ -15,6 +16,11 @@ from smart_notification_manager.core.rules import (
     TriggerKind,
 )
 from smart_notification_manager.websocket import (
+    websocket_alarm_acknowledge,
+    websocket_alarm_events,
+    websocket_alarm_list,
+    websocket_alarm_resolve,
+    websocket_alarm_trigger,
     websocket_channel_group_save,
     websocket_channel_save,
     websocket_recipient_save,
@@ -160,3 +166,24 @@ async def test_phase3_channel_template_and_rule_routing_websocket_round_trip(tmp
     assert connection.errors == []
     assert (await rule_store.async_get(saved.rule_id)).routing["channel_ids"] == ["mobile"]
     assert (await recipient_store.async_list_channels())[0]["channel_id"] == "mobile"
+
+
+@pytest.mark.asyncio
+async def test_phase4_alarm_websocket_lifecycle_round_trip(tmp_path):
+    repository = SQLiteRepository(tmp_path / "manager.sqlite3")
+    rule_store = RuleStore(repository)
+    alarm_store = AlarmLifecycleStore(repository)
+    saved = await rule_store.async_save(base_rule(), EditorAccess("ha-admin", frozenset({"admin"})))
+    hass = SimpleNamespace(data={DOMAIN: {"rule_store": rule_store, "alarm_store": alarm_store}})
+    connection = Connection()
+    trigger = implementation(websocket_alarm_trigger)
+    await trigger(hass, connection, {"id": 11, "request": {"rule_id": saved.rule_id, "entity_id": "binary_sensor.door", "friendly_name": "Tür", "priority": "warning", "current_state": "on"}})
+    alarm = connection.results[-1][1]["alarm"]
+    await implementation(websocket_alarm_list)(hass, connection, {"id": 12})
+    assert connection.results[-1][1]["alarms"][0]["alarm_id"] == alarm["alarm_id"]
+    await implementation(websocket_alarm_acknowledge)(hass, connection, {"id": 13, "request": {"alarm_id": alarm["alarm_id"], "scope": "all"}})
+    assert connection.results[-1][1]["alarm"]["acknowledgement_state"] == "acknowledged"
+    await implementation(websocket_alarm_events)(hass, connection, {"id": 14, "alarm_id": alarm["alarm_id"]})
+    assert [event["event_type"] for event in connection.results[-1][1]["events"]] == ["triggered", "acknowledged"]
+    await implementation(websocket_alarm_resolve)(hass, connection, {"id": 15, "alarm_id": alarm["alarm_id"]})
+    assert connection.results[-1][1]["alarm"]["alarm_state"] == "resolved"
