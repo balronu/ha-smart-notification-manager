@@ -15,5 +15,7 @@
 | 11 | geführte Migration, Hybridbetrieb, Backup/Rollback | Pilot ohne Sicherheitsquellen |
 | 12 | HACS-/CI-/Release-Readiness und vollständige Integration | alle Gates, keine offenen Pflichttests |
 
-Phase 1 bis Phase 4 sind abgeschlossen und in `main` integriert. Die vollständige authentifizierte Home-Assistant-HTTP-/WebSocket-/Panel-E2E-Prüfung bleibt in Issue #16 offen. Die Gates #17 Hassfest, #18 HACS und #19 Secret-Scan bleiben ebenfalls vor der Beta verbindlich offen. FRITZ!Box und SIP/PBX sind vorbereitet, nicht vollständig implementiert. Phase 5 beginnt erst nach ausdrücklicher Freigabe.
+Phase 1 bis Phase 4 sind abgeschlossen und in `main` integriert. Phase 5 ist
+auf `feature/phase-5-notification-policies` in Entwicklung und noch nicht
+abgenommen. Die vollständige authentifizierte Home-Assistant-HTTP-/WebSocket-/Panel-E2E-Prüfung bleibt in Issue #16 offen. Die Gates #17 Hassfest, #18 HACS und #19 Secret-Scan bleiben ebenfalls vor der Beta verbindlich offen. FRITZ!Box und SIP/PBX sind vorbereitet, nicht vollständig implementiert. Phase 6 beginnt erst nach ausdrücklicher Freigabe.
 Die erste öffentliche Beta bleibt bis zum Abschluss aller zwölf Phasen gesperrt.

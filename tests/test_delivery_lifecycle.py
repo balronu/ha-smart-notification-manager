@@ -1,5 +1,6 @@
 import asyncio
-from datetime import UTC, datetime
+from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -12,8 +13,11 @@ from smart_notification_manager.core.adapters import (
     adapter_from_channel,
 )
 from smart_notification_manager.core.delivery_service import DeliveryService
-from smart_notification_manager.core.delivery_store import DeliveryStore
+from smart_notification_manager.core.delivery_store import DeliveryStore, PolicySuppressedError
+from smart_notification_manager.core.policies import PolicyStore, QuietHours, RateLimitPolicy
 from smart_notification_manager.core.repository import SQLiteRepository
+from smart_notification_manager.core.rule_store import EditorAccess, RuleStore
+from test_storage import valid_storage_rule
 
 
 class FakeServices:
@@ -38,6 +42,10 @@ def request(attempt_id="attempt-1"):
 
 async def store_with_target(path: Path) -> DeliveryStore:
     repository = SQLiteRepository(path)
+    return await store_with_repository(repository)
+
+
+async def store_with_repository(repository: SQLiteRepository) -> DeliveryStore:
     await repository.async_run(
         lambda connection: (
             connection.execute("INSERT INTO recipients(recipient_id, display_name, enabled, metadata_json) VALUES ('michael', 'Michael', 1, '{}')"),
@@ -131,3 +139,58 @@ async def test_authorized_delivery_uses_mock_service_and_persists_acceptance(tmp
     assert job.state == "accepted"
     assert job.delivery_confirmed is False
     assert len(hass.services.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_delivery_enqueue_is_policy_gated_and_preview_or_observation_does_not_reserve(tmp_path: Path):
+    repository = SQLiteRepository(tmp_path / "manager.sqlite3")
+    store = await store_with_repository(repository)
+    policies = PolicyStore(repository)
+    rule = await RuleStore(repository).async_save(valid_storage_rule(), EditorAccess("owner", frozenset({"edit"})))
+    now = datetime(2026, 1, 1, 23, tzinfo=UTC)
+    delivery_request = replace(request(), payload={"policy_request": {"rule_id": rule.rule_id, "alarm_id": None, "alarm_state": "active", "rule_enabled": True, "priority": "normal"}})
+    await policies.async_save_quiet_hours(QuietHours("night", "Nacht", True, (0, 1, 2, 3, 4, 5, 6), "22:00", "07:00"), user_id="owner", now=now)
+    with pytest.raises(PolicySuppressedError, match="Ruhezeit"):
+        await store.async_enqueue(delivery_request, idempotency_key="quiet", channel_id="mobile", alarm_id=None, policy_store=policies, policy_request=delivery_request.payload["policy_request"], now=now)
+    assert await store.async_list() == []
+    assert await repository.async_run(lambda c: c.execute("SELECT reason_code FROM policy_decisions ORDER BY occurred_at DESC LIMIT 1").fetchone()[0]) == "quiet_hours"
+    await policies.async_save_rate_limit(RateLimitPolicy(rule.rule_id, 600, 1), user_id="owner", now=now)
+    await policies.async_save_quiet_hours(QuietHours("night", "Nacht", False, (0, 1, 2, 3, 4, 5, 6), "22:00", "07:00"), user_id="owner", now=now)
+    allowed = await store.async_enqueue(delivery_request, idempotency_key="allowed", channel_id="mobile", alarm_id=None, policy_store=policies, policy_request=delivery_request.payload["policy_request"], now=now)
+    assert allowed.state == "pending"
+    with pytest.raises(PolicySuppressedError, match="Rate-Limit"):
+        await store.async_enqueue(delivery_request, idempotency_key="blocked", channel_id="mobile", alarm_id=None, policy_store=policies, policy_request=delivery_request.payload["policy_request"], now=now)
+    assert await repository.async_run(lambda c: c.execute("SELECT COUNT(*) FROM rate_limit_events WHERE kind='notification'").fetchone()[0]) == 1
+
+
+@pytest.mark.asyncio
+async def test_failed_delivery_keeps_reservation_and_retry_does_not_double_count(tmp_path: Path):
+    repository = SQLiteRepository(tmp_path / "manager.sqlite3")
+    store = await store_with_repository(repository)
+    policies = PolicyStore(repository)
+    rule = await RuleStore(repository).async_save(valid_storage_rule(), EditorAccess("owner", frozenset({"edit"})))
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    await policies.async_save_rate_limit(RateLimitPolicy(rule.rule_id, 600, 1), user_id="owner", now=now)
+    policy_request = {"rule_id": rule.rule_id, "alarm_id": None, "alarm_state": "active", "rule_enabled": True, "priority": "normal"}
+    job = await store.async_enqueue(replace(request(), payload={}), idempotency_key="failed", channel_id="mobile", alarm_id=None, policy_store=policies, policy_request=policy_request, now=now)
+    claimed = await store.async_claim_due(now=now)
+    assert claimed is not None
+    await store.async_record_result(claimed.attempt_id, DeliveryResult(status="failed", error_code="provider"), now=now, max_attempts=2, backoff_seconds=1)
+    assert await repository.async_run(lambda c: c.execute("SELECT COUNT(*) FROM rate_limit_events WHERE kind='notification'").fetchone()[0]) == 1
+    assert (await store.async_claim_due(now=now + timedelta(seconds=1))).attempt_id == job.attempt_id
+
+
+@pytest.mark.asyncio
+async def test_idempotent_enqueue_does_not_reserve_rate_limit_twice(tmp_path: Path):
+    repository = SQLiteRepository(tmp_path / "manager.sqlite3")
+    store = await store_with_repository(repository)
+    policies = PolicyStore(repository)
+    rule = await RuleStore(repository).async_save(valid_storage_rule(), EditorAccess("owner", frozenset({"edit"})))
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    await policies.async_save_rate_limit(RateLimitPolicy(rule.rule_id, 600, 1), user_id="owner", now=now)
+    policy_request = {"rule_id": rule.rule_id, "alarm_id": None, "alarm_state": "active", "rule_enabled": True, "priority": "normal"}
+    delivery_request = replace(request(), payload={})
+    first = await store.async_enqueue(delivery_request, idempotency_key="same", channel_id="mobile", policy_store=policies, policy_request=policy_request, now=now)
+    duplicate = await store.async_enqueue(replace(delivery_request, attempt_id="different"), idempotency_key="same", channel_id="mobile", policy_store=policies, policy_request=policy_request, now=now)
+    assert duplicate.attempt_id == first.attempt_id
+    assert await repository.async_run(lambda c: c.execute("SELECT COUNT(*) FROM rate_limit_events WHERE kind='notification'").fetchone()[0]) == 1

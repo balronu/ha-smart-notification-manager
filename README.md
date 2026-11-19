@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Entwicklungsstatus:** Phase 4 von 12 abgeschlossen und in `main` integriert. Der Alarm-Lifecycle arbeitet ausschließlich mit simulierten Versandadaptern. Die authentifizierte HA-Runtime-/Panel-E2E-Prüfung sowie Qualitäts-Gates #16–#19 bleiben vorläufige Beta-Blocker.
+> **Entwicklungsstatus:** Phase 5 von 12 ist auf einem Feature-Branch in Entwicklung. Ruhezeiten, Pausen, Rate-Limits, Abhängigkeiten und Beobachtungsmodus werden als Policy-Schicht vorbereitet; die Phase ist noch nicht abgenommen oder in `main` integriert. Die authentifizierte HA-Runtime-/Panel-E2E-Prüfung sowie Qualitäts-Gates #16–#19 bleiben Beta-Blocker.
 
 ## Ziel
 
@@ -28,6 +28,7 @@ Die Datenbank wird nicht automatisch in einer produktiven HA-Instanz angelegt. D
 - [Entwicklungsplan](docs/DEVELOPMENT_PLAN.md)
 - [Testplan](docs/TEST_PLAN.md)
 - [Release-Policy](docs/RELEASE_POLICY.md)
+- [Phase 5 – Benachrichtigungspolitiken](docs/PHASE5_NOTIFICATION_POLICIES.md)
 
 ## Phase-2-Ergebnis
 
@@ -59,7 +60,7 @@ Backoff ist vorbereitet. Reale HA-Service-Adapter verwenden ausschließlich
 konfigurierte Home-Assistant-Dienste und benötigen eine explizite Freigabe;
 automatischer Echtversand ist in dieser Entwicklungsphase gesperrt.
 
-## Phase-4-Zwischenstand
+## Phase-4-Ergebnis
 
 Der persistente Alarm-Lifecycle unterstützt unabhängige Alarmvorgänge je
 auslösender Entity, Pending/Active/Resolved/Suppressed/Overdue/Manually-Closed,
@@ -68,6 +69,14 @@ Eskalationsstufen und chronologische Ereignisse. Die Alarmverwaltung ist über
 geschützte WebSocket-Kommandos und eine responsive deutsche Oberfläche
 erreichbar. Eine vollständige HA-Runtime-/Panel-E2E-Prüfung sowie echte
 Versandaktionen sind weiterhin nicht freigegeben.
+
+## Phase-5-Zwischenstand
+
+Die Policy-Schicht speichert Ruhezeiten mit Zeitzonen, zeitlich begrenzte
+Pausen, persistente Rate-Limits, Regelabhängigkeiten und Beobachtungsmodus.
+Entscheidungen werden vor Delivery nachvollziehbar protokolliert; der
+Beobachtungsmodus erzeugt keinen Versand. Phase 5 befindet sich noch in
+Entwicklung und ist nicht merge- oder releasefähig.
 
 ## Entwicklung
 

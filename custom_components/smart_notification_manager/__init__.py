@@ -12,7 +12,9 @@ from homeassistant.core import HomeAssistant
 
 from .const import CONF_DB_PATH, DEFAULT_DB_PATH, DOMAIN
 from .core.alarm_lifecycle import AlarmLifecycleStore
+from .core.delivery_service import DeliveryService
 from .core.delivery_store import DeliveryStore
+from .core.policies import PolicyStore
 from .core.recipient_store import RecipientStore
 from .core.repository import SQLiteRepository
 from .core.rule_store import RuleStore
@@ -39,10 +41,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     database_path = options.get(CONF_DB_PATH, data.get(CONF_DB_PATH, DEFAULT_DB_PATH))
     if hasattr(hass, "config") and hasattr(hass.config, "path"):
         database_path = hass.config.path(database_path)
-    runtime["rule_store"] = RuleStore(SQLiteRepository(database_path))
-    runtime["recipient_store"] = RecipientStore(SQLiteRepository(database_path))
-    runtime["delivery_store"] = DeliveryStore(SQLiteRepository(database_path))
-    runtime["alarm_store"] = AlarmLifecycleStore(SQLiteRepository(database_path))
+    repository = SQLiteRepository(database_path)
+    runtime["repository"] = repository
+    runtime["rule_store"] = RuleStore(repository)
+    runtime["recipient_store"] = RecipientStore(repository)
+    runtime["delivery_store"] = DeliveryStore(repository)
+    runtime["alarm_store"] = AlarmLifecycleStore(repository)
+    runtime["policy_store"] = PolicyStore(repository)
+    runtime["delivery_service"] = DeliveryService(runtime["delivery_store"], runtime["policy_store"])
     if hasattr(hass, "config"):
         async_register_websocket(hass)
     if getattr(hass, "http", None) is not None and not runtime.get("frontend_registered"):
@@ -73,5 +79,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     runtime.pop("rule_store", None)
     runtime.pop("recipient_store", None)
     runtime.pop("delivery_store", None)
+    runtime.pop("delivery_service", None)
     runtime.pop("alarm_store", None)
+    runtime.pop("policy_store", None)
+    runtime.pop("repository", None)
     return True

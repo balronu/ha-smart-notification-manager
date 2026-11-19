@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 
-CURRENT_SCHEMA_VERSION = 5
+CURRENT_SCHEMA_VERSION = 6
 
 
 def apply_migrations(connection: sqlite3.Connection) -> None:
@@ -36,6 +36,8 @@ def apply_migrations(connection: sqlite3.Connection) -> None:
                 _migration_v4(connection)
             elif next_version == 5:
                 _migration_v5(connection)
+            elif next_version == 6:
+                _migration_v6(connection)
             else:  # pragma: no cover - guarded by CURRENT_SCHEMA_VERSION
                 raise RuntimeError(f"missing migration {next_version}")
             connection.execute(f"PRAGMA user_version = {next_version}")
@@ -286,6 +288,85 @@ def _migration_v5(connection: sqlite3.Connection) -> None:
         ALTER TABLE alarm_instances ADD COLUMN required_recipient_ids_json TEXT NOT NULL DEFAULT '[]';
         CREATE INDEX IF NOT EXISTS ix_acknowledgements_alarm_user
             ON acknowledgements(alarm_id, user_id);
+        """,
+    )
+
+
+def _migration_v6(connection: sqlite3.Connection) -> None:
+    """Persist Phase-5 notification policies without changing alarm state."""
+
+    _execute_sql_statements(
+        connection,
+        """
+        CREATE TABLE IF NOT EXISTS quiet_hours (
+            quiet_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0, 1)),
+            weekdays_json TEXT NOT NULL DEFAULT '[0,1,2,3,4,5,6]',
+            start_time TEXT NOT NULL,
+            end_time TEXT NOT NULL,
+            timezone TEXT NOT NULL DEFAULT 'UTC',
+            rule_exceptions_json TEXT NOT NULL DEFAULT '[]',
+            priority_exceptions_json TEXT NOT NULL DEFAULT '["critical"]',
+            updated_by TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS notification_pauses (
+            pause_id TEXT PRIMARY KEY,
+            scope_type TEXT NOT NULL CHECK (scope_type IN ('global','rule','category','entity')),
+            scope_id TEXT,
+            starts_at TEXT NOT NULL,
+            ends_at TEXT,
+            reason TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            critical_confirmed INTEGER NOT NULL DEFAULT 0 CHECK (critical_confirmed IN (0, 1)),
+            active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ix_notification_pauses_active ON notification_pauses(active, starts_at, ends_at);
+        CREATE TABLE IF NOT EXISTS rate_limit_policies (
+            rule_id TEXT PRIMARY KEY REFERENCES rules(rule_id) ON DELETE CASCADE,
+            window_seconds INTEGER NOT NULL CHECK (window_seconds > 0),
+            max_notifications INTEGER NOT NULL CHECK (max_notifications > 0),
+            critical_exempt INTEGER NOT NULL DEFAULT 1 CHECK (critical_exempt IN (0, 1)),
+            enabled INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0, 1)),
+            updated_by TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS rate_limit_events (
+            event_id TEXT PRIMARY KEY,
+            rule_id TEXT NOT NULL REFERENCES rules(rule_id) ON DELETE CASCADE,
+            alarm_id TEXT,
+            occurred_at TEXT NOT NULL,
+            kind TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ix_rate_limit_events_rule_time ON rate_limit_events(rule_id, occurred_at);
+        CREATE TABLE IF NOT EXISTS rule_dependencies (
+            rule_id TEXT NOT NULL REFERENCES rules(rule_id) ON DELETE CASCADE,
+            depends_on_rule_id TEXT NOT NULL REFERENCES rules(rule_id) ON DELETE CASCADE,
+            expected_state TEXT NOT NULL CHECK (expected_state IN ('active','inactive')),
+            enabled INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0, 1)),
+            updated_by TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY(rule_id, depends_on_rule_id)
+        );
+        CREATE TABLE IF NOT EXISTS observation_modes (
+            rule_id TEXT PRIMARY KEY REFERENCES rules(rule_id) ON DELETE CASCADE,
+            enabled INTEGER NOT NULL DEFAULT 0 CHECK (enabled IN (0, 1)),
+            critical_confirmed INTEGER NOT NULL DEFAULT 0 CHECK (critical_confirmed IN (0, 1)),
+            updated_by TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS policy_decisions (
+            decision_id TEXT PRIMARY KEY,
+            rule_id TEXT NOT NULL,
+            alarm_id TEXT,
+            action TEXT NOT NULL,
+            reason_code TEXT NOT NULL,
+            reason_de TEXT NOT NULL,
+            occurred_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ix_policy_decisions_rule_time ON policy_decisions(rule_id, occurred_at);
         """,
     )
 

@@ -23,6 +23,10 @@ from smart_notification_manager.websocket import (
     websocket_alarm_trigger,
     websocket_channel_group_save,
     websocket_channel_save,
+    websocket_delivery_enqueue,
+    websocket_policy_evaluate,
+    websocket_policy_list,
+    websocket_policy_quiet_save,
     websocket_recipient_save,
     websocket_rule_routing_save,
     websocket_save,
@@ -187,3 +191,30 @@ async def test_phase4_alarm_websocket_lifecycle_round_trip(tmp_path):
     assert [event["event_type"] for event in connection.results[-1][1]["events"]] == ["triggered", "acknowledged"]
     await implementation(websocket_alarm_resolve)(hass, connection, {"id": 15, "alarm_id": alarm["alarm_id"]})
     assert connection.results[-1][1]["alarm"]["alarm_state"] == "resolved"
+
+
+@pytest.mark.asyncio
+async def test_phase5_policy_websocket_round_trip_has_no_delivery_side_effect(tmp_path):
+    repository = SQLiteRepository(tmp_path / "manager.sqlite3")
+    policy_store = __import__("smart_notification_manager.core.policies", fromlist=["PolicyStore"]).PolicyStore(repository)
+    hass = SimpleNamespace(data={DOMAIN: {"policy_store": policy_store}})
+    connection = Connection()
+    await implementation(websocket_policy_quiet_save)(hass, connection, {"id": 30, "quiet": {"quiet_id": "night", "name": "Nacht", "start_time": "22:00", "end_time": "07:00", "weekdays": [0, 1, 2, 3, 4]}})
+    assert connection.errors == []
+    await implementation(websocket_policy_evaluate)(hass, connection, {"id": 31, "request": {"rule_id": "rule", "alarm_state": "active", "rule_enabled": True, "priority": "normal"}})
+    assert connection.results[-1][1]["decision"]["action"] == "allow"
+    await implementation(websocket_policy_list)(hass, connection, {"id": 32})
+    assert connection.results[-1][1]["quiet_hours"][0]["quiet_id"] == "night"
+    assert await repository.async_run(lambda c: c.execute("SELECT COUNT(*) FROM delivery_attempts").fetchone()[0]) == 0
+
+
+@pytest.mark.asyncio
+async def test_direct_websocket_enqueue_cannot_bypass_policy(tmp_path):
+    repository = SQLiteRepository(tmp_path / "manager.sqlite3")
+    from smart_notification_manager.core.delivery_store import DeliveryStore
+    from smart_notification_manager.core.policies import PolicyStore
+
+    hass = SimpleNamespace(data={DOMAIN: {"recipient_store": RecipientStore(repository), "delivery_store": DeliveryStore(repository), "policy_store": PolicyStore(repository)}})
+    connection = Connection()
+    await implementation(websocket_delivery_enqueue)(hass, connection, {"id": 33, "request": {"attempt_id": "attempt", "recipient_id": "michael", "message": "x"}, "channel_id": "mobile", "idempotency_key": "direct"})
+    assert connection.errors[-1][0:2] == (33, "invalid_format")

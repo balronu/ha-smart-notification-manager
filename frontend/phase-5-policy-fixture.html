@@ -1,0 +1,13 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Phase 5 Policy Fixture</title>
+<smart-notification-phase5-policy-manager id="policy"></smart-notification-phase5-policy-manager>
+<script src="smart-notification-manager.js"></script>
+<script>
+  const panel = document.querySelector("#policy");
+  panel.data = { quiet_hours: [{ name: "Nacht", start_time: "22:00", end_time: "07:00", enabled: true }], pauses: [], rate_limits: [], decisions: [] };
+  setTimeout(() => {
+    const text = panel.shadowRoot?.textContent || "";
+    document.body.dataset.rendered = text.includes("Ruhezeiten, Pausen und Richtlinien") && text.includes("Ruhezeit speichern") ? "passed" : "failed";
+  }, 50);
+</script>

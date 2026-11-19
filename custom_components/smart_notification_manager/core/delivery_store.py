@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from .adapters import DeliveryRequest, DeliveryResult
+from .policies import PolicyDecision, PolicyStore
 from .repository import SQLiteRepository
 
 
@@ -23,6 +24,14 @@ class DeliveryJob:
     next_attempt_at: datetime | None
     delivery_confirmed: bool
     payload: dict[str, Any]
+
+
+class PolicySuppressedError(RuntimeError):
+    """The policy boundary rejected creation of a delivery job."""
+
+    def __init__(self, decision: PolicyDecision) -> None:
+        super().__init__(decision.reason_de)
+        self.decision = decision
 
 
 def _parse_time(value: str | None) -> datetime | None:
@@ -45,24 +54,37 @@ class DeliveryStore:
     def __init__(self, repository: SQLiteRepository) -> None:
         self.repository = repository
 
-    async def async_enqueue(self, request: DeliveryRequest, *, idempotency_key: str, channel_id: str, alarm_id: str | None = None) -> DeliveryJob:
+    async def async_enqueue(self, request: DeliveryRequest, *, idempotency_key: str, channel_id: str, alarm_id: str | None = None, policy_store: PolicyStore | None = None, policy_request: dict[str, Any] | None = None, now: datetime | None = None) -> DeliveryJob:
         if not idempotency_key.strip():
             raise ValueError("idempotency key is required")
-        now = _utc(datetime.now(UTC))
+        timestamp = now or datetime.now(UTC)
+        now_text = _utc(timestamp)
         payload = json.dumps({"title": request.title, "message": request.message, **request.payload}, ensure_ascii=False, sort_keys=True)
 
         def operation(connection):
+            existing = connection.execute("SELECT * FROM delivery_attempts WHERE idempotency_key = ?", (idempotency_key,)).fetchone()
+            if existing is not None:
+                return _row_to_job(existing)
+            if policy_store is not None:
+                if policy_request is None:
+                    raise ValueError("Policy-Entscheidung für regulären Versand erforderlich")
+                decision = policy_store.decide_in_connection(connection, policy_request, now=timestamp)
+                if decision.action != "allow":
+                    return decision
             connection.execute(
                 """INSERT INTO delivery_attempts
                 (attempt_id, idempotency_key, alarm_id, recipient_id, channel_id, state, attempt_number, next_attempt_at, attempted_at, payload_json)
                 VALUES (?, ?, ?, ?, ?, 'pending', 0, NULL, ?, ?)
                 ON CONFLICT DO NOTHING""",
-                (request.attempt_id, idempotency_key, alarm_id, request.recipient_id, channel_id, now, payload),
+                (request.attempt_id, idempotency_key, alarm_id, request.recipient_id, channel_id, now_text, payload),
             )
             row = connection.execute("SELECT * FROM delivery_attempts WHERE idempotency_key = ?", (idempotency_key,)).fetchone()
             return _row_to_job(row)
 
-        return await self.repository.async_run(operation)
+        result = await self.repository.async_run(operation)
+        if isinstance(result, PolicyDecision):
+            raise PolicySuppressedError(result)
+        return result
 
     async def async_claim_due(self, *, now: datetime, lease_seconds: int = 60, attempt_id: str | None = None) -> DeliveryJob | None:
         now_text = _utc(now)
