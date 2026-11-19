@@ -70,7 +70,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, websocket_save)
     websocket_api.async_register_command(hass, websocket_delete)
     websocket_api.async_register_command(hass, websocket_duplicate)
-    for handler in (websocket_recipient_list, websocket_recipient_save, websocket_recipient_delete, websocket_group_save, websocket_channel_save, websocket_channel_group_save, websocket_channel_group_delete, websocket_template_save, websocket_template_delete, websocket_routing_preview, websocket_rule_routing_save, websocket_delivery_enqueue, websocket_delivery_list, websocket_alarm_list, websocket_alarm_trigger, websocket_alarm_events, websocket_alarm_acknowledge, websocket_alarm_acknowledge_many, websocket_alarm_resolve, websocket_alarm_close, websocket_alarm_center_list, websocket_alarm_center_detail, websocket_alarm_category_list, websocket_alarm_category_save, websocket_alarm_category_deactivate, websocket_alarm_filter_list, websocket_alarm_filter_save, websocket_alarm_filter_delete, websocket_alarm_role_save, websocket_policy_list, websocket_policy_quiet_save, websocket_policy_pause_save, websocket_policy_pause_resume, websocket_policy_rate_limit_save, websocket_policy_dependency_save, websocket_policy_observation_save, websocket_policy_evaluate, websocket_phase8_template_list, websocket_phase8_template_save, websocket_phase8_template_delete, websocket_phase8_template_export, websocket_phase8_template_import, websocket_phase8_simulate, websocket_phase10_observe, websocket_phase8_versions, websocket_phase8_restore, websocket_phase9_discover, websocket_phase9_preview, websocket_phase9_prepare, websocket_phase9_activate, websocket_phase9_rollback, websocket_phase9_reference):
+    for handler in (websocket_recipient_list, websocket_recipient_save, websocket_recipient_delete, websocket_group_save, websocket_channel_save, websocket_channel_group_save, websocket_channel_group_delete, websocket_template_save, websocket_template_delete, websocket_routing_preview, websocket_rule_routing_save, websocket_delivery_enqueue, websocket_delivery_list, websocket_alarm_list, websocket_alarm_trigger, websocket_alarm_events, websocket_alarm_acknowledge, websocket_alarm_acknowledge_many, websocket_alarm_resolve, websocket_alarm_close, websocket_alarm_center_list, websocket_alarm_center_detail, websocket_alarm_category_list, websocket_alarm_category_save, websocket_alarm_category_deactivate, websocket_alarm_filter_list, websocket_alarm_filter_save, websocket_alarm_filter_delete, websocket_alarm_role_save, websocket_policy_list, websocket_policy_quiet_save, websocket_policy_pause_save, websocket_policy_pause_resume, websocket_policy_rate_limit_save, websocket_policy_dependency_save, websocket_policy_observation_save, websocket_policy_evaluate, websocket_phase8_template_list, websocket_phase8_template_save, websocket_phase8_template_delete, websocket_phase8_template_export, websocket_phase8_template_import, websocket_phase8_simulate, websocket_phase10_observe, websocket_phase8_versions, websocket_phase8_restore, websocket_phase9_discover, websocket_phase9_preview, websocket_phase9_prepare, websocket_phase9_activate, websocket_phase9_rollback, websocket_phase9_reference, websocket_phase11_export, websocket_phase11_import, websocket_phase11_backup, websocket_phase11_restore, websocket_phase11_recovery):
         websocket_api.async_register_command(hass, handler)
     hass.data[DOMAIN]["websocket_registered"] = True
 
@@ -936,6 +936,60 @@ async def websocket_phase9_reference(hass: HomeAssistant, connection, msg: dict[
         connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die externe Alarmreferenz ist ungültig.")
     except (RuntimeError, sqlite3.Error) as err:
         _send_storage_error(connection, msg, err)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/phase11/export", probatio.Required("plan_id"): str})
+@websocket_api.async_response
+async def websocket_phase11_export(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        connection.send_result(msg["id"], await _automation_migration_store(hass).async_export_plan(msg["plan_id"], user_id=_user_id(connection)))
+    except (PermissionError, TypeError, ValueError, KeyError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Der Migrationsplan kann nicht exportiert werden.")
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/phase11/import", probatio.Required("payload"): dict, probatio.Required("confirm"): bool})
+@websocket_api.async_response
+async def websocket_phase11_import(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        result = await _automation_migration_store(hass).async_import_plan(msg["payload"], user_id=_user_id(connection), confirm=msg["confirm"], now=datetime.now(UTC))
+        connection.send_result(msg["id"], result)
+    except PermissionError:
+        connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Der Import benötigt eine ausdrückliche Bestätigung.")
+    except (TypeError, ValueError, KeyError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Der Migrationsimport ist ungültig.")
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/phase11/backup", probatio.Required("plan_id"): str})
+@websocket_api.async_response
+async def websocket_phase11_backup(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        connection.send_result(msg["id"], await _automation_migration_store(hass).async_create_backup(msg["plan_id"], user_id=_user_id(connection), now=datetime.now(UTC)))
+    except (PermissionError, TypeError, ValueError, KeyError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Sicherung kann nicht erstellt werden.")
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/phase11/restore", probatio.Required("backup_id"): str, probatio.Required("expected_source_hash"): str})
+@websocket_api.async_response
+async def websocket_phase11_restore(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        result = await _automation_migration_store(hass).async_restore_backup(msg["backup_id"], user_id=_user_id(connection), expected_source_hash=msg["expected_source_hash"], now=datetime.now(UTC))
+        connection.send_result(msg["id"], result)
+    except (PermissionError, TypeError, ValueError, KeyError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Wiederherstellung wurde wegen eines Konflikts abgelehnt.")
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/phase11/recovery"})
+@websocket_api.async_response
+async def websocket_phase11_recovery(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    try:
+        connection.send_result(msg["id"], await _automation_migration_store(hass).async_recovery_snapshot(user_id=_user_id(connection)))
+    except (PermissionError, TypeError, ValueError, KeyError):
+        connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Der Wiederherstellungsstatus ist nicht verfügbar.")
 
 
 def _store(hass: HomeAssistant) -> RuleStore:

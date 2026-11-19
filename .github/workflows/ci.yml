@@ -31,3 +31,5 @@ jobs:
       - run: cmp --silent frontend/phase-9-automation-migration.js custom_components/smart_notification_manager/frontend/phase-9-automation-migration.js
       - run: node --check frontend/smart-notification-manager-observation-card.js
       - run: cmp --silent frontend/smart-notification-manager-observation-card.js custom_components/smart_notification_manager/frontend/smart-notification-manager-observation-card.js
+      - run: node --check frontend/phase-11-guided-migration.js
+      - run: cmp --silent frontend/phase-11-guided-migration.js custom_components/smart_notification_manager/frontend/phase-11-guided-migration.js

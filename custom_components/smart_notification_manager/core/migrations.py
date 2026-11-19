@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 
-CURRENT_SCHEMA_VERSION = 9
+CURRENT_SCHEMA_VERSION = 10
 
 
 def apply_migrations(connection: sqlite3.Connection) -> None:
@@ -44,6 +44,8 @@ def apply_migrations(connection: sqlite3.Connection) -> None:
                 _migration_v8(connection)
             elif next_version == 9:
                 _migration_v9(connection)
+            elif next_version == 10:
+                _migration_v10(connection)
             else:  # pragma: no cover - guarded by CURRENT_SCHEMA_VERSION
                 raise RuntimeError(f"missing migration {next_version}")
             connection.execute(f"PRAGMA user_version = {next_version}")
@@ -484,6 +486,26 @@ def _migration_v9(connection: sqlite3.Connection) -> None:
             details_json TEXT NOT NULL DEFAULT '{}',
             occurred_at TEXT NOT NULL
         );
+        """,
+    )
+
+
+def _migration_v10(connection: sqlite3.Connection) -> None:
+    """Persist immutable Phase-11 migration backups for restart recovery."""
+
+    _execute_sql_statements(
+        connection,
+        """
+        CREATE TABLE IF NOT EXISTS migration_backups (
+            backup_id TEXT PRIMARY KEY,
+            plan_id TEXT NOT NULL REFERENCES automation_migration_plans(plan_id),
+            source_hash TEXT NOT NULL,
+            payload_json TEXT NOT NULL,
+            created_by TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ix_migration_backups_plan
+            ON migration_backups(plan_id, created_at);
         """,
     )
 

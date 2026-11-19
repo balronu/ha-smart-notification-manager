@@ -350,3 +350,87 @@ class AutomationMigrationStore:
             row = connection.execute("SELECT * FROM external_alarm_references WHERE automation_id=? AND execution_ref=?", (automation_id, execution_ref)).fetchone()
             return dict(row) if row else None
         return await self.repository.async_run(operation)
+
+    async def async_export_plan(self, plan_id: str, *, user_id: str) -> dict[str, Any]:
+        """Export a redacted local plan, its audit trail and references."""
+        if not user_id:
+            raise PermissionError("authentifizierter Benutzer erforderlich")
+
+        def operation(connection):
+            row = connection.execute("SELECT * FROM automation_migration_plans WHERE plan_id=?", (plan_id,)).fetchone()
+            if row is None:
+                raise ValueError("Migrationsplan nicht gefunden")
+            plan = dict(row)
+            plan["draft"] = json.loads(plan.pop("draft_json"))
+            plan["original"] = json.loads(plan.pop("original_json"))
+            audit = [dict(item) for item in connection.execute("SELECT action,details_json,occurred_at FROM automation_migration_audit WHERE plan_id=? ORDER BY occurred_at", (plan_id,))]
+            for item in audit:
+                item["details"] = json.loads(item.pop("details_json"))
+            references = [dict(item) for item in connection.execute("SELECT * FROM external_alarm_references WHERE automation_id=?", (plan["automation_id"],))]
+            return {"format": "smart_notification_manager.phase11", "version": 1, "plan": plan, "audit": audit, "external_references": references}
+
+        return await self.repository.async_run(operation)
+
+    async def async_import_plan(self, payload: dict[str, Any], *, user_id: str, confirm: bool, now: datetime | None = None) -> dict[str, Any]:
+        """Import a plan as a new, unapproved local draft; never write HA state."""
+        if not user_id or not confirm:
+            raise PermissionError("Import benötigt eine ausdrückliche Bestätigung")
+        if payload.get("format") != "smart_notification_manager.phase11" or payload.get("version") != 1:
+            raise ValueError("Unbekanntes Migrationsformat")
+        source = payload.get("plan")
+        if not isinstance(source, dict) or not source.get("automation_id") or not source.get("source_hash"):
+            raise ValueError("Migrationsplan ist unvollständig")
+        timestamp = now or datetime.now(UTC)
+        plan_id = new_id()
+        plan = {**source, "plan_id": plan_id, "status": "imported", "created_by": user_id, "created_at": timestamp.isoformat(), "updated_at": timestamp.isoformat()}
+
+        def operation(connection):
+            connection.execute("INSERT INTO automation_migration_plans(plan_id,automation_id,source_hash,classification,draft_json,original_json,status,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)", (plan_id, plan["automation_id"], plan["source_hash"], plan.get("classification", "nur_manuell"), json.dumps(plan.get("draft"), ensure_ascii=False), json.dumps(plan.get("original", {}), ensure_ascii=False), "imported", user_id, timestamp.isoformat(), timestamp.isoformat()))
+            connection.execute("INSERT INTO automation_migration_audit(audit_id,plan_id,automation_id,action,details_json,occurred_at) VALUES (?,?,?,?,?,?)", (new_id(), plan_id, plan["automation_id"], "imported", json.dumps({"source_plan_id": source.get("plan_id")}, ensure_ascii=False), timestamp.isoformat()))
+            return {"plan_id": plan_id, "status": "imported", "requires_confirmation": True, "ha_write_performed": False}
+
+        return await self.repository.async_run(operation)
+
+    async def async_create_backup(self, plan_id: str, *, user_id: str, now: datetime | None = None) -> dict[str, Any]:
+        if not user_id:
+            raise PermissionError("authentifizierter Benutzer erforderlich")
+        timestamp = now or datetime.now(UTC)
+        exported = await self.async_export_plan(plan_id, user_id=user_id)
+        backup_id = new_id()
+        plan = exported["plan"]
+        await self.repository.async_run(lambda connection: connection.execute("INSERT INTO migration_backups(backup_id,plan_id,source_hash,payload_json,created_by,created_at) VALUES (?,?,?,?,?,?)", (backup_id, plan_id, plan["source_hash"], json.dumps(exported, ensure_ascii=False), user_id, timestamp.isoformat())))
+        return {"backup_id": backup_id, "plan_id": plan_id, "source_hash": plan["source_hash"], "created_at": timestamp.isoformat(), "ha_write_performed": False}
+
+    async def async_restore_backup(self, backup_id: str, *, user_id: str, expected_source_hash: str, now: datetime | None = None) -> dict[str, Any]:
+        if not user_id:
+            raise PermissionError("authentifizierter Benutzer erforderlich")
+        timestamp = now or datetime.now(UTC)
+
+        def operation(connection):
+            backup = connection.execute("SELECT * FROM migration_backups WHERE backup_id=?", (backup_id,)).fetchone()
+            if backup is None:
+                raise ValueError("Sicherung nicht gefunden")
+            if backup["source_hash"] != expected_source_hash:
+                raise ValueError("Sicherungskonflikt: Quellversion stimmt nicht überein")
+            current = connection.execute("SELECT source_hash FROM automation_migration_plans WHERE plan_id=?", (backup["plan_id"],)).fetchone()
+            if current is None or current[0] != expected_source_hash:
+                raise ValueError("Migrationsplan wurde zwischenzeitlich geändert")
+            payload = json.loads(backup["payload_json"])
+            plan = payload["plan"]
+            connection.execute("UPDATE automation_migration_plans SET classification=?,draft_json=?,original_json=?,status='prepared',updated_at=? WHERE plan_id=?", (plan["classification"], json.dumps(plan.get("draft"), ensure_ascii=False), json.dumps(plan.get("original", {}), ensure_ascii=False), timestamp.isoformat(), backup["plan_id"]))
+            connection.execute("INSERT INTO automation_migration_audit(audit_id,plan_id,automation_id,action,details_json,occurred_at) VALUES (?,?,?,?,?,?)", (new_id(), backup["plan_id"], plan["automation_id"], "backup_restored", json.dumps({"backup_id": backup_id}, ensure_ascii=False), timestamp.isoformat()))
+            return {"backup_id": backup_id, "plan_id": backup["plan_id"], "status": "prepared", "ha_write_performed": False}
+
+        return await self.repository.async_run(operation)
+
+    async def async_recovery_snapshot(self, *, user_id: str) -> dict[str, Any]:
+        """Read all resumable local plans and external mappings after restart."""
+        if not user_id:
+            raise PermissionError("authentifizierter Benutzer erforderlich")
+
+        def operation(connection):
+            plans = [dict(row) for row in connection.execute("SELECT plan_id,automation_id,source_hash,classification,status,updated_at FROM automation_migration_plans WHERE status IN ('prepared','approved','imported') ORDER BY updated_at")]
+            references = [dict(row) for row in connection.execute("SELECT automation_id,execution_ref,entity_id,rule_id,alarm_id,alarm_status,last_event,updated_at FROM external_alarm_references ORDER BY updated_at")]
+            return {"plans": plans, "external_references": references, "ha_write_performed": False}
+
+        return await self.repository.async_run(operation)

@@ -1,6 +1,11 @@
 # Changelog
 
-## Unveröffentlicht – Phase 10 in Entwicklung
+## Unveröffentlicht – Phase 11 in Entwicklung
+
+- Versionierter Import/Export, atomare Migrationssicherungen und Neustart-Wiederherstellung ohne produktive HA-Änderung.
+- Geführte deutsche Migrationsaktionen mit Konfliktprüfung, Rollback- und Duplikatschutz.
+
+## Phase 10
 
 - Zweite responsive Lovelace-Karte für schreibfreie Simulation und Beobachtungsmodus mit expliziter Keine-Aktion-Garantie.
 - Unvollständige Zustandsdaten werden sicher als „Nicht sicher bestimmbar“ angezeigt.

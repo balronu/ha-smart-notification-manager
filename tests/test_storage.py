@@ -40,7 +40,7 @@ def valid_storage_rule():
 @pytest.mark.asyncio
 async def test_sqlite_schema_is_created_in_worker(tmp_path: Path):
     repository = SQLiteRepository(tmp_path / "manager.sqlite3")
-    assert await repository.async_schema_version() == 9
+    assert await repository.async_schema_version() == 10
     assert (tmp_path / "manager.sqlite3").exists()
 
 
@@ -108,7 +108,7 @@ def test_failed_migration_rolls_back_and_can_resume(tmp_path: Path, monkeypatch)
     connection.close()
     connection = sqlite3.connect(database)
     migrations.apply_migrations(connection)
-    assert connection.execute("PRAGMA user_version").fetchone()[0] == 9
+    assert connection.execute("PRAGMA user_version").fetchone()[0] == 10
     assert connection.execute(
         "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'rules'"
     ).fetchone() is not None
