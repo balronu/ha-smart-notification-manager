@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Entwicklungsstatus:** Phase 6 von 12 wird auf `feature/phase-6-alarm-center` entwickelt. Die Alarmzentrale ist implementiert, aber noch nicht gemergt. Issue #24, die authentifizierte HA-Runtime-/Panel-E2E-Prüfung und Qualitäts-Gates #16–#19 bleiben vor der Beta offen.
+> **Entwicklungsstatus:** Phase 6 von 12 ist in `main` integriert. Die Alarmzentrale mit serverseitigen Filtern, Kategorien, persönlichen Ansichten, Timeline und Rollenprüfung ist abgeschlossen. Issue #24, die authentifizierte HA-Runtime-/Panel-E2E-Prüfung und Qualitäts-Gates #16–#19 bleiben vor der Beta offen.
 
 ## Ziel
 
@@ -103,4 +103,4 @@ Die Lizenzentscheidung ist weiterhin offen und wird vor einer öffentlichen Ver�
 
 ## English summary
 
-Smart Notification Manager is a German-first Home Assistant custom integration under development. Phase 5 is integrated on `main` and adds persistent notification policies before delivery. Alarm repeat/escalation delivery remains tracked in issue #24; full HA runtime E2E, telephony and HACS publication remain gated.
+Smart Notification Manager is a German-first Home Assistant custom integration under development. Phase 6 is integrated on `main` and adds the alarm center with server-side filtering and permissions. Alarm repeat/escalation delivery remains tracked in issue #24; full HA runtime E2E, telephony and HACS publication remain gated.

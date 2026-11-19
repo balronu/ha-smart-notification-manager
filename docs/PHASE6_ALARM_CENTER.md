@@ -1,6 +1,6 @@
 # Phase 6 – Alarmzentrale
 
-Phase 6 erweitert die bestehende Alarm-Lifecycle-Datenbank um eine zentrale,
+Phase 6 ist in `main` integriert. Sie erweitert die bestehende Alarm-Lifecycle-Datenbank um eine zentrale,
 deutsche Alarmübersicht. Alarm-IDs und die vorhandene Timeline bleiben
 unverändert; die Abfrage verwendet dieselbe SQLite-Repository-Instanz.
 
