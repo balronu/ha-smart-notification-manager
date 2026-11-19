@@ -1,5 +1,14 @@
 # Changelog
 
+## Unveröffentlicht – Phase 2 in Entwicklung
+
+- Validierte Regeldefinitionen mit Prioritäten, Triggern und rekursivem Bedingungsbaum.
+- Deterministische Auswertung für Zustände, Zahlen, Anwesenheit, Wochentage und Zeitfenster.
+- Versionierter Regel-Store mit Duplikation, Soft-Delete und serverseitigem Editor-Berechtigungskontext.
+- Read-only-Katalog aus Home-Assistant-Entity-, Device- und Area-Registry.
+- Deutscher, responsiver visueller Web-Editor mit Suche, Entitätsauswahl, Vorschau und Validierung.
+- Isolierte Desktop-/Mobil-Fixtures und echte PNG-Screenshots.
+
 ## Unveröffentlicht – Phase 1 abgeschlossen
 
 - Neues privates Repository und Domain `smart_notification_manager`.

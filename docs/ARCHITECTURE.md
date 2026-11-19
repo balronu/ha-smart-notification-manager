@@ -23,18 +23,18 @@ Async SQLite repository / additive migrations
 
 | Modul | Verantwortung | Phase 1 |
 |---|---|---|
-| Rule Engine | stabile Regeldefinitionen und Versionen | Modelle vorbereitet |
-| Condition Engine | Zeitfenster und später HA-Zustandsbedingungen | reine Zeitfensterlogik |
+| Rule Engine | stabile Regeldefinitionen und Versionen | validiertes Regelmodell, CRUD und Soft-Delete |
+| Condition Engine | Zeitfenster und später HA-Zustandsbedingungen | deterministischer Bedingungsbaum |
 | Alarm Lifecycle | aktive Ursache, Bestätigung, Abschluss, Eskalation | Duplikatschutz im Speicher |
 | Scheduler | geplante Aufgaben | Schema vorbereitet |
 | Delivery Router | deterministische Ziele, Dedup | reine Route-Entscheidung |
 | Channel Adapter | Fähigkeiten, Validierung, Versand, Feedback | Protocol definiert, kein Versand |
 | Recipient Management | Geräte, Empfänger, Gruppen | Schema vorbereitet |
 | Permissions | deny-by-default Rechtebasis | pure helper |
-| Storage/Migration | SQLite, Foreign Keys, Versionen | Migration v1 |
+| Storage/Migration | SQLite, Foreign Keys, Versionen | Migration v1/v2 und Regelversionen |
 | Statistics | Tages-/Monatswerte | Schema vorbereitet |
 | Audit/Diagnostics | technische Nachvollziehbarkeit | Schema/Vertrag vorbereitet |
-| Frontend API | spätere UI-API | bewusst nicht aktiviert |
+| Frontend API | spätere UI-API | visueller Editor als isolierte Web-Komponente |
 
 ## Sicherheitsgrenze
 
@@ -51,6 +51,15 @@ administrativen oder benutzerbezogenen Aktionen freigeschaltet.
 Vor einer späteren API oder einem Dienst müssen die Berechtigungen an den
 authentifizierten HA-User-Kontext gebunden, für jede Aktion geprüft, auditiert
 und in einem isolierten HA-Fixture getestet werden.
+
+## Entitätskatalog
+
+Der Editor bezieht seine auswählbaren Entitäten über die offiziellen
+`entity_registry`, `device_registry` und `area_registry`-Helfer von Home
+Assistant. Friendly Name, Entity-ID, Bereich, Domain und der aktuelle Zustand
+werden zu schreibgeschützten `EntitySnapshot`-Werten zusammengeführt.
+Entitäten ohne Bereich bleiben sichtbar und werden mit „Kein Bereich“
+angezeigt.
 
 ## Persistenz- und Lifecycle-Grenze
 

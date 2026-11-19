@@ -25,3 +25,4 @@ jobs:
       - run: uv run python -m json.tool custom_components/smart_notification_manager/manifest.json >/dev/null
       - run: uv run python -m json.tool custom_components/smart_notification_manager/strings.json >/dev/null
       - run: uv run python -m json.tool hacs.json >/dev/null
+      - run: node --check frontend/smart-notification-manager.js

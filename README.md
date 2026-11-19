@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Entwicklungsstatus:** Phase 1 von 12 abgeschlossen; Phase 2 wartet auf Freigabe. Noch nicht installierbar, kein Versand, keine Telefonie, kein HACS-Release.
+> **Entwicklungsstatus:** Phase 2 von 12 – visueller Regeleditor in Entwicklung. Noch nicht installierbar, kein Versand, keine Telefonie, kein HACS-Release.
 
 ## Ziel
 
@@ -28,6 +28,18 @@ Die Datenbank wird in Phase 1 nicht automatisch in einer produktiven HA-Instanz 
 - [Entwicklungsplan](docs/DEVELOPMENT_PLAN.md)
 - [Testplan](docs/TEST_PLAN.md)
 - [Release-Policy](docs/RELEASE_POLICY.md)
+
+## Phase-2-Vorschau
+
+Der visuelle Regeleditor unterstützt Regelübersicht, Suche, Prioritäten,
+Entitätsauswahl aus HA-Registern, Zustandsauslöser, verschachtelte
+Bedingungsgruppen, verständliche Vorschau und responsive Darstellung.
+
+![Desktop-Regel-Editor](docs/screenshots/phase-2-rule-editor-desktop.png)
+![Mobile-Regel-Editor](docs/screenshots/phase-2-rule-editor-mobile.png)
+
+Die Screenshots stammen aus dem isolierten Browser-Fixture und zeigen keine
+produktive Home-Assistant-Instanz.
 
 ## Entwicklung
 

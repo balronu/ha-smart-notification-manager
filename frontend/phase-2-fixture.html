@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="de">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Notification Manager – Phase 2 Fixture</title></head>
+  <body>
+    <smart-notification-rule-editor></smart-notification-rule-editor>
+    <script src="smart-notification-manager.js"></script>
+    <script>
+      const editor = document.querySelector("smart-notification-rule-editor");
+      editor.data = {
+        entities: [
+          {entity_id: "binary_sensor.haustuer", friendly_name: "Haustür", area_name: "Eingang", entity_type: "binary_sensor", state: "off"},
+          {entity_id: "sensor.wohnzimmer_temperatur", friendly_name: "Wohnzimmer Temperatur", area_name: "Wohnzimmer", entity_type: "sensor", state: "21.4 °C"},
+          {entity_id: "person.michael", friendly_name: "Michael", area_name: null, entity_type: "person", state: "home"}
+        ],
+        rules: [
+          {rule_id: "fixture-door", name: "Haustür offen", category: "Sicherheit", priority: "warning", enabled: true, description: "Meldung bei geöffneter Haustür", triggers: [{entity_ids: ["binary_sensor.haustuer"], to_state: "on", minimum_duration_seconds: 30, delay_seconds: 0}], conditions: {kind: "all", children: [{kind: "entity_state", value: {entity_id: "binary_sensor.haustuer", state: "on"}}]}}
+        ],
+        onSave: (rule) => console.log("Fixture save", rule),
+        onDelete: (id) => console.log("Fixture delete", id),
+        onDuplicate: (rule) => console.log("Fixture duplicate", rule)
+      };
+      editor.open("fixture-door");
+      setTimeout(() => {
+        editor.shadowRoot.querySelector('[data-action="add-condition"]').click();
+        document.body.dataset.interaction = editor.shadowRoot.querySelectorAll(".condition-row").length > 0 ? "passed" : "failed";
+      }, 25);
+    </script>
+  </body>
+</html>

@@ -3,6 +3,12 @@ from datetime import UTC, datetime, time
 import pytest
 from smart_notification_manager.core.conditions import TimeWindow, is_in_window
 from smart_notification_manager.core.engine import AlarmLifecycleEngine
+from smart_notification_manager.core.evaluator import (
+    EvaluationContext,
+    evaluate_condition,
+    evaluate_numeric_trigger,
+    evaluate_state_trigger,
+)
 from smart_notification_manager.core.models import (
     AlarmState,
     ensure_aware,
@@ -11,6 +17,7 @@ from smart_notification_manager.core.models import (
 )
 from smart_notification_manager.core.permissions import Permission, can_access
 from smart_notification_manager.core.router import deduplicate_recipients
+from smart_notification_manager.core.rules import Comparison, ConditionNode
 
 
 def test_ids_are_opaque_uuid_values():
@@ -50,3 +57,41 @@ def test_time_window_supports_overnight():
     assert is_in_window(window, datetime(2026, 1, 1, 23, tzinfo=UTC))
     assert is_in_window(window, datetime(2026, 1, 1, 6, tzinfo=UTC))
     assert not is_in_window(window, datetime(2026, 1, 1, 12, tzinfo=UTC))
+
+
+def test_condition_tree_is_deterministic_and_nested():
+    tree = ConditionNode(
+        "all",
+        children=(
+            ConditionNode("entity_state", {"entity_id": "binary_sensor.door", "state": "on"}),
+            ConditionNode("any", children=(
+                ConditionNode("numeric", {"entity_id": "sensor.temp", "comparison": "lt", "threshold": 5}),
+                ConditionNode("presence", {"entity_id": "person.michael", "present": True}),
+            )),
+        ),
+    )
+    context = EvaluationContext(
+        states={"binary_sensor.door": "on"},
+        numeric_states={"sensor.temp": 8},
+        presence={"person.michael": True},
+        now=datetime(2026, 1, 1, 12, tzinfo=UTC),
+    )
+    assert evaluate_condition(tree, context)
+
+
+def test_condition_unknown_values_do_not_match():
+    condition = ConditionNode("entity_state", {"entity_id": "sensor.x", "state": "on"})
+    context = EvaluationContext(states={"sensor.x": "unknown"}, numeric_states={}, presence={}, now=datetime.now(UTC))
+    assert not evaluate_condition(condition, context)
+    assert not evaluate_state_trigger("unknown", "on", from_state=None, to_state="on")
+
+
+def test_numeric_comparison_between():
+    condition = ConditionNode("numeric", {"entity_id": "sensor.x", "comparison": Comparison.BETWEEN.value, "threshold": 10, "upper_threshold": 20})
+    context = EvaluationContext(states={}, numeric_states={"sensor.x": 15}, presence={}, now=datetime.now(UTC))
+    assert evaluate_condition(condition, context)
+
+
+def test_numeric_trigger_hysteresis_and_minimum_duration():
+    assert not evaluate_numeric_trigger(11, "gt", 10, elapsed_seconds=2, minimum_duration_seconds=5)
+    assert evaluate_numeric_trigger(9.5, "gt", 10, previous_match=True, hysteresis=1, elapsed_seconds=5)

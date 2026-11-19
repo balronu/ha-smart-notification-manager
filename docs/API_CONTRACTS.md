@@ -10,6 +10,21 @@ Phase 1 definiert noch keinen produktiven Versand- oder WebSocket-Endpunkt.
 - `RouteDecision`: deterministische Empfängerliste und Unterdrückungsgrund
 - `AlarmLifecycleEngine`: `start(rule_id, cause_key)` und `resolve(...)`
 - `SQLiteRepository`: `async_run()` und `async_schema_version()`; blockierende Arbeit wird ausgelagert
+- `RuleStore`: versioniertes `async_save()`, `async_get()`, `async_list()`, sichere Duplikation und Soft-Delete
+- `EntitySnapshot`: schreibgeschützter Friendly Name, Entity-ID, Bereich, Domain und Zustand aus HA-Registern
+- `EvaluationContext`: reproduzierbarer Zustandssnapshot für die Bedingungsauswertung
+
+## Editor-Grenze
+
+`frontend/smart-notification-manager.js` ist eine responsive, deutschsprachige
+Web-Komponente mit Regelübersicht, Suche, Wizard-Schritten, Entitätsauswahl,
+Bedingungsgruppen, Vorschau und Validierung. Sie nimmt keine technische
+JSON-Regel als Benutzereingabe an.
+
+Die Komponente ist in Phase 2 als isoliertes Frontend-Fixture und Quellvertrag
+validiert. Die produktive HA-Panel-/WebSocket-Anbindung bleibt ein späteres
+HA-Adapter-Gate; dadurch werden in dieser Phase keine produktiven Schreibwege
+freigeschaltet.
 
 ## Berechtigungen
 
