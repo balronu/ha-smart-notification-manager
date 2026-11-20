@@ -5,7 +5,8 @@
   "scripts": {
     "e2e:phase12": "node tests/e2e/phase12-browser.mjs",
     "e2e:editor": "node tests/e2e/editor-select.mjs",
-    "e2e:panel-lifecycle": "node tests/e2e/panel-lifecycle.mjs"
+    "e2e:panel-lifecycle": "node tests/e2e/panel-lifecycle.mjs",
+    "e2e:diagnostics": "node tests/e2e/diagnostics.mjs"
   },
   "devDependencies": {
     "playwright-core": "1.65.1"

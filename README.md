@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Beta-Teststand `v0.1.0-beta.4`:** Dieser manuell installierbare öffentliche Teststand behebt den verbliebenen Fokusverlust durch verspätete Panel-Ladeantworten nach dem Öffnen eines neuen Entwurfs. Er ist keine vollständige Produktabnahme; die authentifizierte HA-Browser-E2E und manuelle Praxisergebnisse stehen noch aus.
+> **Diagnose-Beta `v0.1.0-beta.5`:** Dieser manuell installierbare öffentliche Teststand ergänzt eine eigenständige, HA-authentifizierte Diagnoseansicht für den iOS-White-Screen. Er behebt den White-Screen noch nicht und ist keine vollständige Produktabnahme; die authentifizierte HA-Browser-E2E und manuelle Praxisergebnisse stehen noch aus.
 
 ## Ziel
 
@@ -36,6 +36,7 @@ Die Datenbank wird nicht automatisch in einer produktiven HA-Instanz angelegt. D
 - [Phase 10 – Beobachtungskarte und Simulation](docs/PHASE10_OBSERVATION_CARD.md)
 - [Phase 11 – Geführte Migration und Wiederherstellung](docs/PHASE11_GUIDED_MIGRATION.md)
 - [Beta-Gates und Abnahmestatus](docs/BETA_GATES.md)
+- [Frontend- und iPhone-Diagnose](docs/FRONTEND_DIAGNOSTICS.md)
 - [Lizenz- und Komponentenprüfung](docs/LICENSING.md)
 - [Phase 12 – Abnahmebericht](docs/PHASE12_ACCEPTANCE.md)
 
@@ -114,7 +115,7 @@ bestehende Alarm- und RuleStore-Datenkette.
 1. In HACS **Benutzerdefinierte Repositories** öffnen.
 2. `balronu/ha-smart-notification-manager` als Repository vom Typ
    **Integration** hinzufügen.
-3. Die Vorabversion `v0.1.0-beta.4` auswählen und installieren.
+3. Die Vorabversion `v0.1.0-beta.5` auswählen und installieren.
 4. Home Assistant nach den üblichen eigenen Installationsschritten neu laden
    und die Integration über **Einstellungen → Geräte & Dienste** einrichten.
 
@@ -136,8 +137,9 @@ Michael Dick.
 ## English summary
 
 Smart Notification Manager is a German-first Home Assistant custom integration.
-`v0.1.0-beta.4` is a manually installable public test release. It fixes
-dropdown selection loss during background panel updates.
+`v0.1.0-beta.5` is a manually installable public diagnostic beta. It adds an
+authenticated standalone diagnostic page for the iOS white-screen report; it
+does not claim to fix the white screen.
 Telegram,
 WhatsApp and telephony are optional; missing services do not block core setup.
 Authenticated HA browser E2E and manual practical results remain open, so this
