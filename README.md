@@ -36,6 +36,7 @@ Die Datenbank wird nicht automatisch in einer produktiven HA-Instanz angelegt. D
 - [Phase 10 – Beobachtungskarte und Simulation](docs/PHASE10_OBSERVATION_CARD.md)
 - [Phase 11 – Geführte Migration und Wiederherstellung](docs/PHASE11_GUIDED_MIGRATION.md)
 - [Beta-Gates und Abnahmestatus](docs/BETA_GATES.md)
+- [Lizenz- und Komponentenprüfung](docs/LICENSING.md)
 
 ## Phase-2-Ergebnis
 
@@ -121,7 +122,8 @@ Beiträge und Fehlerberichte werden über GitHub Issues und Pull Requests angeno
 
 ## Lizenz
 
-Die Lizenzentscheidung ist weiterhin offen und wird vor einer öffentlichen Veröffentlichung dokumentiert.
+Dieses Projekt steht unter der [MIT-Lizenz](LICENSE). Copyright (c) 2026
+Michael Dick.
 
 ## English summary
 

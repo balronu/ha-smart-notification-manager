@@ -8,9 +8,10 @@ Die verbindlichen Gate-Prüfungen werden nicht durch lokale Fixtures ersetzt.
   folgt erst nach PR- und Main-CI dieses Fixes.
 - **#17 Hassfest:** wird im CI über `home-assistant/actions/hassfest` gegen den
   unveränderlichen CI-Commit ausgeführt.
-- **#18 HACS:** wird im CI über `hacs/action` als Integration validiert, sobald
-  das Repository öffentlich ist. Der aktuelle offizielle Lauf ist wegen der
-  privaten Repository-Sichtbarkeit nicht ausführbar; das Gate bleibt offen.
+- **#18 HACS:** wird im CI über `hacs/action` als Integration validiert. Der
+  offizielle Lauf muss nach der autorisierten Public-Schaltung gegen den
+  unveränderlichen Merge-Commit erfolgreich sein; bis dahin bleibt das Gate
+  offen.
 - **#19 Secret-Scan:** `detect-secrets` prüft den aktuellen Baum und ein
   Dummy-Sentinel; zusätzlich wurde die Git-Historie mit 358 Blobs geprüft.
 - **#24 Wiederholung/Eskalation:** wird über den zentralen, policy-geprüften

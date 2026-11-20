@@ -14,5 +14,4 @@ Sie darf erst veröffentlicht werden, wenn alle zwölf Phasen vollständig imple
 
 ## Release-Gates
 
-Vor einer späteren Freigabe müssen Code, Manifest, Dokumentation, CI, HACS-Metadaten, Tests, Tag und Release-Body übereinstimmen. VM 104 bleibt bis zu einer gesonderten ausdrücklichen Installationsfreigabe unverändert.
-
+Vor einer späteren Freigabe müssen Code, Manifest, Dokumentation, CI, HACS-Metadaten, Tests, Lizenz, Tag und Release-Body übereinstimmen. VM 104 bleibt bis zu einer gesonderten ausdrücklichen Installationsfreigabe unverändert.
