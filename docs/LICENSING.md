@@ -28,3 +28,13 @@ Test-Harnesses. Ein aktueller Baumscan und ein Scan der erreichbaren Git-
 Historie ergaben keine Secret-Treffer. Die Prüfung ersetzt keine Prüfung
 zusätzlicher Komponenten, die später als Laufzeitabhängigkeit aufgenommen
 werden; solche Änderungen müssen vor Veröffentlichung erneut bewertet werden.
+
+## Lokales Branding
+
+Die HACS-Prüfung erfordert ein lokales `brand/icon.png`. Das enthaltene Motiv
+ist ein eigens für dieses Projekt erstelltes neutrales Fallback-Symbol; es
+verwendet keine fremde Marke und beansprucht keine Verfügbarkeit im offiziellen
+Home-Assistant-Brands-CDN. Die Quelldatei liegt unter
+`docs/branding/smart-notification-manager-neutral.svg`; die ausgelieferten
+Varianten sind 256×256 und 512×512 PNG. Eine spätere Markenentscheidung kann
+die Assets ersetzen, bleibt aber von der MIT-Lizenz des Codes getrennt.
