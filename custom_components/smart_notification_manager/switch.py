@@ -27,7 +27,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         await async_sync_rule_switches(runtime["rule_store"], runtime["metrics_coordinator"], entry, entities, async_add_entities)
 
     runtime.setdefault("rule_switch_unsubscribers", {})[entry.entry_id] = async_dispatcher_connect(
-        hass, SIGNAL_RULES_UPDATED, lambda *args: hass.async_create_task(refresh_rules(*args))
+        hass, SIGNAL_RULES_UPDATED, refresh_rules
     )
 
 

@@ -68,7 +68,9 @@ isoliert; VM104 und produktive Home-Assistant-Daten waren nicht beteiligt.
 
 ## Status
 
-Der authentifizierte Runtime-Nachweis ist erbracht. Gate #16 wird erst nach
-Review, erfolgreicher PR-CI und Main-CI als geschlossen dokumentiert. Gate #18
-bleibt unabhängig davon offen, solange die offizielle HACS-Validierung wegen
-der privaten Repository-Sichtbarkeit nicht vollständig ausführbar ist.
+Der authentifizierte Runtime-Nachweis ist erbracht. Der ergänzende offizielle
+Harness- und Regel-Persistenznachweis steht in
+`docs/GATE16_OFFICIAL_HARNESS.md`. Gate #16 wird erst nach Review,
+erfolgreicher PR-CI und Main-CI als geschlossen dokumentiert. Gate #18 bleibt
+unabhängig davon offen, solange die offizielle HACS-Validierung wegen der
+privaten Repository-Sichtbarkeit nicht vollständig ausführbar ist.

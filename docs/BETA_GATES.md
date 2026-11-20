@@ -2,11 +2,10 @@
 
 Die verbindlichen Gate-Prüfungen werden nicht durch lokale Fixtures ersetzt.
 
-- **#16 Runtime-E2E:** eine temporäre, isolierte Home-Assistant-Core-
-  Testinstanz wurde mit authentifiziertem Config Flow, WebSocket, Panel,
-  Karten/Editoren, Phase-9/11-Smoke und Desktop/iPad/iPhone-Nachweisen geprüft.
-  Der ausführliche Nachweis steht in `docs/ISOLATED_HA_RUNTIME_PLAN.md`.
-  Die formale Schließung folgt erst nach PR- und Main-CI des Runtime-Fixes.
+- **#16 Runtime-E2E:** die offizielle `pytest-homeassistant`-Harness-Prüfung
+  und ein authentifizierter SQLite-Regel-Speicher-/Laden-/Neustartlauf sind
+  dokumentiert in `docs/GATE16_OFFICIAL_HARNESS.md`; die formale Schließung
+  folgt erst nach PR- und Main-CI dieses Fixes.
 - **#17 Hassfest:** wird im CI über `home-assistant/actions/hassfest` gegen den
   unveränderlichen CI-Commit ausgeführt.
 - **#18 HACS:** wird im CI über `hacs/action` als Integration validiert, sobald
