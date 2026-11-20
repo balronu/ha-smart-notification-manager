@@ -10,8 +10,8 @@ Dieses Dokument ist die Phase-1-Basis für alle zwölf Entwicklungsphasen. `V` b
 | R-004 | Alarmlebenszyklus, Bestätigung, Abschlussgrund | 6 | V als Modellziel |
 | R-005 | Wiederholung, Deduplizierung, Eskalation | 6, 7 | O |
 | R-006 | Personen, Geräte, Empfänger- und Kanalgruppen | 4 | O |
-| R-007 | Notify, Telegram, WhatsApp, FRITZ!Box, SIP/PBX, TTS, E-Mail | 5, 12 | O; konkrete APIs zu verifizieren |
-| R-008 | Klingel- und Sprachanrufe | 5, 12 | O |
+| R-007 | Notify, Telegram, WhatsApp, FRITZ!Box, SIP/PBX, TTS, E-Mail | 5, 12 | Kernbetrieb ohne Telegram, WhatsApp und Telefonie verbindlich; optionale Provider werden nur bei vorhandener HA-Integration validiert und sichtbar als nicht eingerichtet/nicht verfügbar geführt |
+| R-008 | Klingel- und Sprachanrufe | 5, 12 | optional; keine Voraussetzung für die erste Beta, keine erfundenen Provider-APIs |
 | R-009 | Beobachtungsmodus und Simulation ohne Aktion | 10 | O |
 | R-010 | Alarmhistorie, Tages-/Monatsstatistik | 8 | Schema vorbereitet |
 | R-011 | Zwei Lovelace-Karten | 9, 10 | O |
@@ -26,4 +26,3 @@ Dieses Dokument ist die Phase-1-Basis für alle zwölf Entwicklungsphasen. `V` b
 | R-020 | Öffentliche Beta erst nach allen zwölf Phasen | 12 | verbindlich |
 
 Die vollständigen Detailanforderungen aus früheren Gesprächen müssen vor den betroffenen Phasen erneut gegen die aktuelle Anforderungsquelle abgeglichen werden.
-
