@@ -8,24 +8,28 @@ Die Integration erfindet keine Anbieter-API und speichert keine Zugangsdaten.
 |---|---|---|---|---|
 | HA-Notify / Mobile App | implementiert | konfigurierter `notify.*`-Dienst | Nachricht, optionaler Titel, konfigurierbare Service-Daten | Fähigkeiten werden pro Kanal konfiguriert; keine Zustellgarantie |
 | Telegram | über HA-Notify nutzbar | vorhandener Telegram-Notify-Dienst oder `telegram_bot.send_message`-Action | Ziel/Chat-ID wird über die konfigurierte HA-Service-Datenstruktur weitergereicht | keine direkte Telegram-API; Chat-IDs müssen in HA erlaubt sein |
-| WhatsApp | vorbereitet über HA-Integration | vorhandener HA-Dienst der Integration | nur explizit konfigurierte Fähigkeiten | keine proprietäre API |
+| WhatsApp | externer Vertrag, im Projekt nicht direkt implementiert | Meta WhatsApp Business Cloud API oder ausdrücklich konfigurierte HA-Integration | Cloud API unterstützt template-basierte Nachrichten und liefert eine Message-ID; Zustellstatus benötigt signierte HTTPS-Webhooks | Business-Account, Phone-Number-ID, Access Token, genehmigte Templates, Webhook-Infrastruktur und externe Kosten/Ratenlimits; keine Zugangsdatenhaltung oder Webhook-Endpunkt im Projekt |
 | E-Mail | über HA-Dienst nutzbar | vorhandener SMTP-Notify-Dienst bzw. `smtp.send_message`-Action | Nachricht, optionaler Titel und konfiguriertes Ziel | SMTP-Zugang und Providerzustellung nicht garantiert |
 | TTS | über HA-Dienst nutzbar | vorhandener TTS-/Lautsprecher-Dienst, z. B. `tts.speak` | Nachricht, optionaler Titel und konfigurierbare Service-Daten | keine Sprachausgabe in Tests |
-| FRITZ!Box-Klingeln | implementiert über HA-Service | `fritz.dial` mit `device_id`, `number` und `max_ring_seconds` | isoliert getesteter Rufaufbau über den offiziellen HA-Aktionsvertrag; `**9` kann interne Telefone klingeln | FRITZ!Box Tools, Click-to-Dial und Berechtigungen müssen in der Zielinstanz aktiviert sein; keine Sprache |
-| SIP/PBX-TTS | vorbereitet | vorhandener konfigurierter HA-Service | nur bei explizit gemeldeten Fähigkeiten | kein eingebauter SIP-Client |
+| FRITZ!Box-Klingeln | implementiert, externe Zielinstanz offen | `fritz.dial` mit `device_id`, `number` und `max_ring_seconds` | isoliert getesteter Rufaufbau über den offiziellen HA-Aktionsvertrag; `**9` kann interne Telefone klingeln | FRITZ!Box Tools, Click-to-Dial und Berechtigungen müssen in der Zielinstanz aktiviert sein; keine Sprache |
+| SIP/PBX / Sprachanruf | technisch begrenzt, kein direkter Adapter | HA-VoIP ist für Assist über unterstützte VoIP-Adapter dokumentiert; kein generischer Alarm-Originate-Vertrag | Externes PBX kann A/B (wählen/klingeln) leisten; C/D/E (Verbindung, Ansage, Status) sind mit dem offiziellen HA-VoIP-Vertrag nicht als Smart-Notification-Zustellweg belegt | kein eingebauter SIP-Client und keine erfundene AMI-/ARI-Service-Schnittstelle |
 
-`Telegram`, `WhatsApp`, E-Mail und TTS sind damit **nicht pauschal als direkt
-implementiert** zu verstehen: Sie sind nur über einen vorhandenen und
-explizit konfigurierten HA-Service nutzbar. Für FRITZ!Box ist der konkrete
-`fritz.dial`-Adapter implementiert; die externe FRITZ!Box-Konfiguration und
-ein isolierter Zielinstanz-Nachweis bleiben Voraussetzung. SIP/PBX bleibt
-vorbereitet, solange kein kompatibler HA-Service in der Zielumgebung
-nachgewiesen ist.
+`Telegram`, WhatsApp, E-Mail und TTS sind damit **nicht pauschal als direkt
+implementiert** zu verstehen. WhatsApp Cloud API ist ein realer offizieller
+Vertrag, aber diese Integration implementiert ihn derzeit nicht, weil dafür
+eine geschützte Secret-Referenz, Template-/Empfängerregeln und ein signierter
+Webhook-Endpunkt für Zustellstatus erforderlich wären. Eine Community-/HACS-
+Bridge wird nicht als offizieller Providervertrag gewertet. FRITZ!Box ist als
+konkreter Klingeladapter implementiert; die externe Zielinstanz-Abnahme bleibt
+offen. SIP/PBX und Sprachanrufe bleiben ohne belegten direkten Zustelladapter
+offen.
 
-Die offiziellen HA-Verträge sind [Telegram bot](https://www.home-assistant.io/integrations/telegram_bot/),
+Die offiziellen Referenzen sind [Telegram bot](https://www.home-assistant.io/integrations/telegram_bot/),
 [SMTP](https://www.home-assistant.io/integrations/smtp/) und die
-[TTS-Entity-/Service-Schnittstelle](https://contributors.home-assistant.io/core/entities/tts/)
-und [FRITZ!Box `fritz.dial`](https://www.home-assistant.io/actions/fritz.dial/).
+[TTS-Entity-/Service-Schnittstelle](https://contributors.home-assistant.io/core/entities/tts/),
+[FRITZ!Box `fritz.dial`](https://www.home-assistant.io/actions/fritz.dial/),
+[Home-Assistant-VoIP](https://www.home-assistant.io/integrations/voip) und
+[Meta WhatsApp Business Platform](https://developers.facebook.com/documentation/business-messaging/whatsapp/overview/).
 Diese Links dokumentieren die tatsächlich verfügbaren HA-Aktionen; sie sind
 keine Zusage, dass jede Zielinstallation den jeweiligen Provider aktiviert
 oder authentifiziert hat.
