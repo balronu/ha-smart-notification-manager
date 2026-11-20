@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Entwicklungsstatus:** Phase 10 ist als Review-PR in Entwicklung. Die zweite Lovelace-Karte bietet eine schreibfreie Simulation und einen Beobachtungsmodus mit Keine-Aktion-Garantie; bestehende Regeln und Automationen werden nicht verändert. Issue #24, die authentifizierte HA-Runtime-/Panel-E2E-Prüfung und Qualitäts-Gates #16–#19 bleiben vor der Beta offen.
+> **Entwicklungsstatus:** Die Infrastruktur-Gates #16–#19 und #24 sind verifiziert; die fachliche Phase-12-Abnahme ist in [docs/PHASE12_ACCEPTANCE.md](docs/PHASE12_ACCEPTANCE.md) dokumentiert und die Beta bleibt wegen offener Anforderungen gesperrt.
 
 ## Ziel
 
@@ -37,6 +37,7 @@ Die Datenbank wird nicht automatisch in einer produktiven HA-Instanz angelegt. D
 - [Phase 11 – Geführte Migration und Wiederherstellung](docs/PHASE11_GUIDED_MIGRATION.md)
 - [Beta-Gates und Abnahmestatus](docs/BETA_GATES.md)
 - [Lizenz- und Komponentenprüfung](docs/LICENSING.md)
+- [Phase 12 – Abnahmebericht](docs/PHASE12_ACCEPTANCE.md)
 
 ## Phase-2-Ergebnis
 

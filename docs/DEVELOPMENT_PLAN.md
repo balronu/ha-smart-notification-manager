@@ -15,12 +15,10 @@
 | 11 | geführte Migration, Hybridbetrieb, Import/Export, Backup/Rollback und Neustart-Wiederherstellung | isolierte Abnahme ohne Sicherheitsquellen |
 | 12 | HACS-/CI-/Release-Readiness und vollständige Integration | alle Gates, keine offenen Pflichttests |
 
-Phase 1 bis Phase 10 sind abgeschlossen und in `main` integriert. Phase 11 wird
-auf einem separaten Feature-Branch entwickelt und nicht automatisch gemergt. Die
-automatische Zustellung von Alarmwiederholungen und Eskalationen ist als
-verbindlicher Beta-Vorbehalt in Issue #24 offen. Die vollständige
-authentifizierte Home-Assistant-HTTP-/WebSocket-/Panel-E2E-Prüfung bleibt in
-Issue #16 offen. Die Gates #17 Hassfest, #18 HACS und #19 Secret-Scan bleiben
-ebenfalls vor der Beta verbindlich offen. FRITZ!Box und SIP/PBX sind
-vorbereitet, nicht vollständig implementiert.
-Die erste öffentliche Beta bleibt bis zum Abschluss aller zwölf Phasen gesperrt.
+Phase 1 bis Phase 11 sind im aktuellen `main`-Stand vertreten; die technische
+Gate-Prüfung ist in `docs/PHASE12_ACCEPTANCE.md` nachgewiesen. Die Gates #16,
+#17, #18, #19 und #24 sind verifiziert. Die fachliche Anforderungsliste enthält
+jedoch weiterhin offene `O`-Einträge, insbesondere für konkrete Provider-,
+Telefonie-, Statistik- und vollständige Migrationsverträge. FRITZ!Box und
+SIP/PBX sind vorbereitet, nicht vollständig implementiert. Die erste
+öffentliche Beta bleibt deshalb bis zur fachlichen Vollabnahme gesperrt.
