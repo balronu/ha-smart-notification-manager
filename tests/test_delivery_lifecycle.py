@@ -27,7 +27,7 @@ class FakeServices:
         self.calls = []
 
     def has_service(self, domain, service):
-        return (domain, service) == ("notify", "mobile_app_phone")
+        return (domain, service) in {("notify", "mobile_app_phone"), ("fritz", "dial")}
 
     async def async_call(self, domain, service, data, *, blocking):
         self.calls.append((domain, service, data, blocking))
@@ -157,6 +157,30 @@ async def test_missing_home_assistant_service_is_reported_without_call():
     ]
 
 
+@pytest.mark.asyncio
+async def test_fritz_dial_adapter_uses_documented_action_and_never_sends_message_text():
+    hass = FakeHass()
+    adapter = adapter_from_channel(
+        hass,
+        {"channel_type": "fritzbox", "config": {"service": "fritz.dial", "device_id": "fritz-device", "max_ring_seconds": 20}},
+    )
+    assert await adapter.async_validate({"enabled": True, "channel_id": "**9"}) == []
+    result = await adapter.async_send(
+        DeliveryRequest("attempt-fritz", "phone", "Alarm", "nicht als Service-Text", {"recipient_target": "**9"})
+    )
+    assert result.status == "accepted"
+    assert hass.services.calls[-1] == ("fritz", "dial", {"device_id": "fritz-device", "max_ring_seconds": 20, "number": "**9"}, True)
+
+
+def test_fritz_dial_configuration_requires_device_and_bounds_ring_duration():
+    with pytest.raises(ValueError, match="device_id"):
+        validate_channel_config("fritzbox", {"service": "fritz.dial"})
+    with pytest.raises(ValueError, match="zwischen 1 und 300"):
+        validate_channel_config("fritzbox", {"service": "fritz.dial", "device_id": "fritz", "max_ring_seconds": 301})
+    with pytest.raises(ValueError, match="Domänen: fritz"):
+        validate_channel_config("fritzbox", {"service": "notify.test", "device_id": "fritz"})
+
+
 def test_all_phase12_channels_have_explicit_home_assistant_service_contract():
     catalog = channel_catalog()
     channel_types = {item["channel_type"] for item in catalog}
@@ -165,10 +189,14 @@ def test_all_phase12_channels_have_explicit_home_assistant_service_contract():
         channel_type = item["channel_type"]
         service = {
             "telegram": "telegram_bot.send_message",
-            "email": "smtp.send_message",
-            "tts": "tts.speak",
-        }.get(channel_type, "notify.test_target")
-        validate_channel_config(channel_type, {"service": service})
+        "email": "smtp.send_message",
+        "tts": "tts.speak",
+        "fritzbox": "fritz.dial",
+    }.get(channel_type, "notify.test_target")
+        config = {"service": service}
+        if channel_type == "fritzbox":
+            config.update({"device_id": "fritz-device", "max_ring_seconds": 15})
+        validate_channel_config(channel_type, config)
         assert isinstance(item["target_fields"], list)
     assert "telegram_bot.send_message" in next(item["service_examples"] for item in catalog if item["channel_type"] == "telegram")
     assert "smtp.send_message" in next(item["service_examples"] for item in catalog if item["channel_type"] == "email")

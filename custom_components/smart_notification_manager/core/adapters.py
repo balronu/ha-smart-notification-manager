@@ -9,7 +9,7 @@ SUPPORTED_CHANNEL_TYPES = {
     "notify": {"label": "Home-Assistant Notify", "service_examples": ["notify.send_message", "notify.<name>"], "target_fields": ["entity_id", "target"]},
     "telegram": {"label": "Telegram über Home-Assistant-Dienst", "service_examples": ["telegram_bot.send_message", "notify.<telegram_entity>"], "target_fields": ["chat_id", "entity_id"]},
     "whatsapp": {"label": "WhatsApp über Home-Assistant-Dienst", "service_examples": [], "target_fields": ["target", "entity_id"]},
-    "fritzbox": {"label": "FRITZ!Box über Home-Assistant-Dienst", "service_examples": [], "target_fields": ["entity_id", "target"]},
+    "fritzbox": {"label": "FRITZ!Box über Home-Assistant-Dienst", "service_examples": ["fritz.dial"], "target_fields": ["number", "device_id"]},
     "sip_pbx": {"label": "SIP/PBX über Home-Assistant-Dienst", "service_examples": [], "target_fields": ["entity_id", "target"]},
     "tts": {"label": "TTS über Home-Assistant-Dienst", "service_examples": ["tts.speak"], "target_fields": ["media_player_entity_id", "entity_id"]},
     "email": {"label": "E-Mail über Home-Assistant-Dienst", "service_examples": ["smtp.send_message", "notify.<smtp_entity>"], "target_fields": ["entity_id", "target"]},
@@ -26,6 +26,7 @@ SERVICE_DOMAIN_CONTRACTS = {
     "email": frozenset({"smtp", "notify"}),
     "mail": frozenset({"notify"}),
     "tts": frozenset({"tts"}),
+    "fritzbox": frozenset({"fritz"}),
 }
 
 
@@ -43,11 +44,19 @@ def validate_channel_config(channel_type: str, config: dict[str, Any]) -> None:
     service = config.get("service")
     if not isinstance(service, str) or service.count(".") != 1:
         raise ValueError("Jeder Kanal benötigt einen vorhandenen Home-Assistant-Dienst domain.service.")
-    domain, _service = service.split(".", 1)
+    domain, service_name = service.split(".", 1)
     allowed_domains = SERVICE_DOMAIN_CONTRACTS.get(channel_type)
     if allowed_domains is not None and domain not in allowed_domains:
         allowed = ", ".join(sorted(allowed_domains))
         raise ValueError(f"{channel_type} benötigt einen Dienst aus den Domänen: {allowed}.")
+    if channel_type == "fritzbox":
+        if service_name != "dial":
+            raise ValueError("fritzbox benötigt den Dienst fritz.dial.")
+        if not isinstance(config.get("device_id"), str) or not config["device_id"].strip():
+            raise ValueError("fritzbox benötigt eine FRITZ!Box device_id.")
+        max_ring_seconds = config.get("max_ring_seconds", 15)
+        if not isinstance(max_ring_seconds, int) or not 1 <= max_ring_seconds <= 300:
+            raise ValueError("fritzbox benötigt max_ring_seconds zwischen 1 und 300.")
 
 
 class DeliveryAuthorizationError(PermissionError):
@@ -177,6 +186,33 @@ class HAServiceAdapter:
         return None
 
 
+class FritzDialAdapter(HAServiceAdapter):
+    """Adapter for the documented Home Assistant ``fritz.dial`` action."""
+
+    def __init__(self, hass: Any, *, device_id: str, max_ring_seconds: int) -> None:
+        super().__init__(
+            hass,
+            channel_type="fritzbox",
+            domain="fritz",
+            service="dial",
+            capabilities=ChannelCapabilities(
+                "fritzbox",
+                supports_title=False,
+                metadata={"service": "fritz.dial", "mode": "home_assistant_service", "device_id": device_id},
+            ),
+            service_data={"device_id": device_id, "max_ring_seconds": max_ring_seconds},
+        )
+
+    async def async_send(self, request: DeliveryRequest) -> DeliveryResult:
+        number = request.payload.get("recipient_target") or request.payload.get("number")
+        if not isinstance(number, str) or not number.strip():
+            return DeliveryResult(status="failed", error_code="missing_number", error_message="FRITZ!Box benötigt eine Rufnummer.")
+        data = dict(self._service_data)
+        data["number"] = number.strip()
+        await self.hass.services.async_call(self.domain, self.service, data, blocking=True)
+        return DeliveryResult(status="accepted")
+
+
 def adapter_from_channel(hass: Any, channel: dict[str, Any]) -> HAServiceAdapter:
     """Build an adapter only from an existing, explicitly configured HA service."""
 
@@ -186,6 +222,8 @@ def adapter_from_channel(hass: Any, channel: dict[str, Any]) -> HAServiceAdapter
     if not isinstance(service_name, str) or service_name.count(".") != 1:
         raise ValueError("Kanal benötigt einen Home-Assistant-Dienst domain.service")
     domain, service = service_name.split(".", 1)
+    if channel["channel_type"] == "fritzbox":
+        return FritzDialAdapter(hass, device_id=config["device_id"], max_ring_seconds=config.get("max_ring_seconds", 15))
     capabilities = ChannelCapabilities(
         channel_type=channel["channel_type"],
         supports_title=bool(config.get("supports_title", True)),
