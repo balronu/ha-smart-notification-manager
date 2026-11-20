@@ -11,6 +11,7 @@ dependencies = [
 test = [
   "pytest>=8.4",
   "pytest-asyncio>=1.2",
+  "home-assistant-frontend==20261028.6",
   "pytest-homeassistant==2026.11.2",
   "ruff>=0.14",
 ]
