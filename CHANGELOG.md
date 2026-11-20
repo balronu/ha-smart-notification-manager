@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.1.0-beta.2 – Fehlerkorrektur für HA 2026.11.2
+
+### Deutsch
+
+- Bereichsauflösung im Entity-Katalog auf die offizielle HA-2026.11.2-API `async_get_area()` korrigiert.
+- Statistik-WebSocket akzeptiert jetzt den vom Panel gesendeten optionalen `filters`-Umschlag.
+- Parallele Panel-Ladevorgänge werden zusammengeführt; fehlgeschlagene Statistikabfragen werden nicht automatisch wiederholt und bleiben sichtbar.
+- Offizieller HA-Harness-Test für leere Paneldaten mit echtem Bereich und zugeordneter Entität ergänzt.
+- Keine echten Nachrichten, Anrufe oder TTS-Ausgaben; optionale Provider bleiben unverändert.
+
+### English
+
+- Fixed entity-area lookup for the official Home Assistant 2026.11.2 registry API by using `async_get_area()`.
+- The statistics WebSocket now accepts the optional `filters` envelope sent by the panel.
+- Coalesced concurrent panel loads; failed statistics requests remain visible and are not retried automatically.
+- Added an official HA harness regression test with an actual area and assigned entity in the empty-panel flow.
+- No real messages, calls, or TTS output; optional providers are unchanged.
+
 ## v0.1.0-beta.1 – Erste öffentliche Beta
 
 ### Deutsch

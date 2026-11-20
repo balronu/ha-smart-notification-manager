@@ -18,7 +18,7 @@ def list_entity_snapshots(hass: HomeAssistant) -> tuple[EntitySnapshot, ...]:
     for entry in entities.entities.values():
         device = devices.async_get(entry.device_id) if entry.device_id else None
         area_id = entry.area_id or (device.area_id if device else None)
-        area = areas.async_get(area_id) if area_id else None
+        area = areas.async_get_area(area_id) if area_id else None
         state = hass.states.get(entry.entity_id)
         friendly_name = entry.name or entry.original_name or entry.entity_id
         snapshots.append(

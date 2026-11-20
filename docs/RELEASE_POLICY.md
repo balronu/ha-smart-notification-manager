@@ -6,10 +6,16 @@ Während der zwölf Entwicklungsphasen werden grundsätzlich keine Releases
 erstellt. Für den ausdrücklich autorisierten manuellen Teststand gilt folgende
 begrenzte Ausnahme:
 
-Die erste öffentliche Version ist ausschließlich:
+Die erste öffentliche Version war:
 
 ```text
 v0.1.0-beta.1
+```
+
+Die aktuelle manuelle Test-Beta ist:
+
+```text
+v0.1.0-beta.2
 ```
 
 Diese Beta ist kein Nachweis der vollständigen Produktabnahme. Die
