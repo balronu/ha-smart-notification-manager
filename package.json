@@ -1,0 +1,11 @@
+{
+  "name": "ha-smart-notification-manager-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "e2e:phase12": "node tests/e2e/phase12-browser.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "1.65.1"
+  }
+}
