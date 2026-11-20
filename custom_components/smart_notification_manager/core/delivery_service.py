@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any
 
@@ -26,6 +28,7 @@ class DeliveryService:
         adapter: ChannelAdapter,
         recipient: dict[str, Any],
         authorized: bool = False,
+        timeout_seconds: float = 30.0,
         now: datetime | None = None,
     ) -> DeliveryJob:
         if not authorized:
@@ -44,8 +47,13 @@ class DeliveryService:
                 DeliveryResult(status="failed", error_code="invalid_target", error_message="; ".join(errors)),
                 now=timestamp,
             )
+        if timeout_seconds <= 0:
+            raise ValueError("Timeout muss größer als null sein")
+        request_for_recipient = replace(request, payload={**request.payload, "recipient_target": recipient.get("channel_id")})
         try:
-            result = await adapter.async_send(request)
+            result = await asyncio.wait_for(adapter.async_send(request_for_recipient), timeout=timeout_seconds)
+        except TimeoutError:
+            result = DeliveryResult(status="failed", error_code="timeout", error_message="Zustellung hat das Zeitlimit überschritten")
         except Exception as err:  # noqa: BLE001 - adapter boundary must persist provider failures
             result = DeliveryResult(status="failed", error_code="provider_error", error_message=str(err))
         return await self.store.async_record_result(job.attempt_id, result, now=timestamp)

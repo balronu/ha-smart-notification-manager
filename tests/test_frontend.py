@@ -20,6 +20,9 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert "smart_notification_manager/recipient/save" in source
     assert "smart-notification-phase3-manager" in source
     assert "smart_notification_manager/channel-group/save" in source
+    assert "channel_catalog" in source
+    assert "Empfänger-Zielfeld" in source
+    assert "target_field" in source
     assert "smart_notification_manager/template/save" in source
     assert "smart_notification_manager/routing/preview" in source
     assert "smart_notification_manager/rule/routing/save" in source

@@ -108,6 +108,48 @@ async def test_real_service_adapter_is_mocked_and_requires_existing_service():
 
 
 @pytest.mark.asyncio
+async def test_authorized_adapter_can_route_a_recipient_target_without_provider_api(tmp_path: Path):
+    store = await store_with_target(tmp_path / "manager.sqlite3")
+    hass = FakeHass()
+    adapter = adapter_from_channel(
+        hass,
+        {"channel_type": "notify", "config": {"service": "notify.mobile_app_phone", "target_field": "target"}},
+    )
+    job = await DeliveryService(store).async_deliver(
+        request(),
+        channel_id="mobile",
+        idempotency_key="targeted",
+        adapter=adapter,
+        recipient={"enabled": True, "channel_id": "person:owner"},
+        authorized=True,
+        now=datetime(2026, 1, 1, tzinfo=UTC),
+    )
+    assert job.state == "accepted"
+    assert hass.services.calls[0][2]["target"] == "person:owner"
+
+
+@pytest.mark.asyncio
+async def test_delivery_timeout_is_persisted_as_stable_failure(tmp_path: Path):
+    store = await store_with_target(tmp_path / "manager.sqlite3")
+
+    class SlowAdapter(HAServiceAdapter):
+        async def async_send(self, request):
+            await asyncio.sleep(0.05)
+            return DeliveryResult(status="accepted")
+
+    adapter = SlowAdapter(hass=FakeHass(), channel_type="notify", domain="notify", service="mobile_app_phone", capabilities=ChannelCapabilities("notify"))
+    job = await DeliveryService(store).async_deliver(
+        request(), channel_id="mobile", idempotency_key="timeout", adapter=adapter,
+        recipient={"enabled": True, "channel_id": "mobile"}, authorized=True,
+        timeout_seconds=0.001, now=datetime(2026, 1, 1, tzinfo=UTC),
+    )
+    assert job.state == "retry_scheduled"
+    assert await store.repository.async_run(
+        lambda connection: connection.execute("SELECT error_code FROM delivery_attempts WHERE attempt_id=?", (job.attempt_id,)).fetchone()[0]
+    ) == "timeout"
+
+
+@pytest.mark.asyncio
 async def test_missing_home_assistant_service_is_reported_without_call():
     adapter = adapter_from_channel(FakeHass(), {"channel_type": "mail", "config": {"service": "notify.email"}})
     assert await adapter.async_validate({"enabled": True, "channel_id": "mail"}) == [
