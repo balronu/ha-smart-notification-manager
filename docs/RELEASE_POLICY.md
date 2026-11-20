@@ -1,16 +1,21 @@
 # Release-Policy
 
-## Verbindliche Sperre
+## Veröffentlichungsentscheidung
 
-Während der zwölf Entwicklungsphasen werden keine GitHub-Releases, Beta-Tags, Stable-Tags oder HACS-Veröffentlichungen erstellt.
+Während der zwölf Entwicklungsphasen werden grundsätzlich keine Releases
+erstellt. Für den ausdrücklich autorisierten manuellen Teststand gilt folgende
+begrenzte Ausnahme:
 
 Die erste öffentliche Version ist ausschließlich:
 
 ```text
-v1.0.0-beta.1
+v0.1.0-beta.1
 ```
 
-Sie darf erst veröffentlicht werden, wenn alle zwölf Phasen vollständig implementiert, integriert und getestet sind. Ein grüner Teiltest oder ein fertiger Branch ist keine Release-Freigabe.
+Diese Beta ist kein Nachweis der vollständigen Produktabnahme. Die
+authentifizierte Browser-E2E darf für diesen manuellen Teststand offen bleiben
+und muss in den Release Notes als Limitierung genannt werden. Eine Stable-
+Veröffentlichung bleibt bis zur vollständigen Abnahme ausgeschlossen.
 
 ## Release-Gates
 

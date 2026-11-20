@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.1.0-beta.1 – Erste öffentliche Beta
+
+### Deutsch
+
+- Manuell installierbarer öffentlicher Teststand für Home Assistant.
+- Deutscher Regeleditor, Alarm-Center, Empfänger-/Gruppenverwaltung,
+  Zustellstatus, Wiederholung/Eskalation, Tages-/Monatsstatistik sowie
+  Migrationsvorschau und Wiederherstellung enthalten.
+- Telegram, WhatsApp und Telefonie sind optional und blockieren die
+  Einrichtung ohne vorhandene HA-Dienste nicht.
+- Authentifizierte Browser-E2E, manuelle Praxisergebnisse und die externe
+  FRITZ!Box-Zielinstanzprüfung sind noch offen. Keine Stable-Abnahme.
+
+### English
+
+- Manually installable public Home Assistant test release.
+- Includes the German rule editor, alarm center, recipient/group management,
+  delivery status, retry/escalation policies, daily/monthly statistics, and
+  migration preview/recovery.
+- Telegram, WhatsApp, and telephony are optional and missing HA services do
+  not block core setup.
+- Authenticated browser E2E, manual practical results, and external FRITZ!Box
+  target validation remain open. This is not a stable acceptance.
+
 ## Unveröffentlicht – Phase 11 in Entwicklung
 
 - Versionierter Import/Export, atomare Migrationssicherungen und Neustart-Wiederherstellung ohne produktive HA-Änderung.

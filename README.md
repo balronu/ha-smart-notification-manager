@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Entwicklungsstatus:** Die Infrastruktur-Gates #16–#19 und #24 sind verifiziert; die fachliche Phase-12-Abnahme ist in [docs/PHASE12_ACCEPTANCE.md](docs/PHASE12_ACCEPTANCE.md) dokumentiert und die Beta bleibt wegen offener Anforderungen gesperrt.
+> **Beta-Teststand `v0.1.0-beta.1`:** Dieser manuell installierbare öffentliche Teststand ist ausdrücklich für praktische Tests freigegeben. Er ist keine vollständige Produktabnahme; die authentifizierte HA-Browser-E2E und manuelle Praxisergebnisse stehen noch aus.
 
 ## Ziel
 
@@ -59,10 +59,11 @@ Deduplizierung, Routing pro Regel, Versandvorschau und Versandstatus über
 authentifizierte WebSocket-Verträge. Echte Nachrichten, Anrufe und TTS-
 Ausgaben bleiben gesperrt.
 
-HA-Notify, Mobile-App, Telegram, WhatsApp, E-Mail und TTS sind nur über
-konfigurierte HA-Aktionen beziehungsweise als Adaptergrenzen vorgesehen.
-FRITZ!Box-Klingeln und SIP/PBX-Sprachanrufe sind vorbereitet, aber nicht als
-vollständig implementierte Kanäle abzunehmen.
+HA-Notify, Mobile-App, E-Mail und TTS werden über konfigurierte HA-Aktionen
+beziehungsweise Adaptergrenzen geführt. Telegram, WhatsApp und Telefonie
+(einschließlich FRITZ!Box/SIP/PBX) sind optionale Erweiterungen. Fehlen die
+entsprechenden HA-Dienste, zeigen UI und Delivery-Schicht „Nicht eingerichtet“
+oder „Nicht verfügbar“; der Kernbetrieb wird dadurch nicht blockiert.
 
 Der technische Versand-Lifecycle mit Idempotenz, Lease-Schutz und begrenztem
 Backoff ist vorbereitet. Reale HA-Service-Adapter verwenden ausschließlich
@@ -108,14 +109,20 @@ deutsche Editorfelder, WebSocket-only-Datenzugriff und serverseitig geschützte
 Quittierung. Native Sensoren, Binärsensoren und Rule-Switches nutzen die
 bestehende Alarm- und RuleStore-Datenkette.
 
-```bash
-uv sync --extra test
-uv run pytest
-uv run ruff check .
-python -m compileall custom_components
-```
+### Installation über HACS
 
-Für die Entwicklungsstände existieren noch keine öffentlichen Installationsanweisungen. Es werden keine GitHub-Releases, Tags oder öffentlichen HACS-Einträge erzeugt. Vor `v1.0.0-beta.1` müssen die Qualitäts-Gates #16 (HA-Runtime-/Panel-E2E), #17 (Hassfest), #18 (HACS) und #19 (Secret-Scan) abgeschlossen sein.
+1. In HACS **Benutzerdefinierte Repositories** öffnen.
+2. `balronu/ha-smart-notification-manager` als Repository vom Typ
+   **Integration** hinzufügen.
+3. Die Vorabversion `v0.1.0-beta.1` auswählen und installieren.
+4. Home Assistant nach den üblichen eigenen Installationsschritten neu laden
+   und die Integration über **Einstellungen → Geräte & Dienste** einrichten.
+
+Diese Beta enthält keine echten Provider-Zugangsdaten und sendet durch die
+Tests keine Nachrichten, Anrufe oder TTS-Ausgaben. Die authentifizierte
+Browser-Abnahme ist noch offen; Feedback und Fehler bitte über
+[GitHub Issues](https://github.com/balronu/ha-smart-notification-manager/issues)
+melden.
 
 ## Beiträge und Fehler
 
@@ -128,4 +135,8 @@ Michael Dick.
 
 ## English summary
 
-Smart Notification Manager is a German-first Home Assistant custom integration under development. Phase 6 is integrated on `main` and adds the alarm center with server-side filtering and permissions. Alarm repeat/escalation delivery remains tracked in issue #24; full HA runtime E2E, telephony and HACS publication remain gated.
+Smart Notification Manager is a German-first Home Assistant custom integration.
+`v0.1.0-beta.1` is a manually installable public test release. Telegram,
+WhatsApp and telephony are optional; missing services do not block core setup.
+Authenticated HA browser E2E and manual practical results remain open, so this
+beta is not a complete product acceptance.

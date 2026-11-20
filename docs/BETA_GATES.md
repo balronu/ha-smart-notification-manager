@@ -19,6 +19,8 @@ Die verbindlichen Gate-Prüfungen werden nicht durch lokale Fixtures ersetzt.
   nachgewiesen. Die Übergabe erzeugt nur idempotente Delivery-Jobs; ein Adapter
   wird dabei nicht aufgerufen.
 
-Kein Gate autorisiert eine produktive Installation, Benachrichtigung, Release
-oder Tag. Die öffentliche Beta bleibt bis zum Abschluss aller zwölf Phasen
-gesperrt.
+Die oben genannten Gates autorisieren keine produktive Installation,
+Benachrichtigung oder produktive Migration. Der ausdrücklich freigegebene
+manuelle Teststand `v0.1.0-beta.1` ist davon getrennt: Er dokumentiert die
+offene authentifizierte Browser-E2E und schließt Issue #13 nicht. Eine Stable-
+Veröffentlichung bleibt bis zum Abschluss aller zwölf Phasen gesperrt.
