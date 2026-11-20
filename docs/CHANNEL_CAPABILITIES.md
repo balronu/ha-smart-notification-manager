@@ -11,18 +11,21 @@ Die Integration erfindet keine Anbieter-API und speichert keine Zugangsdaten.
 | WhatsApp | vorbereitet über HA-Integration | vorhandener HA-Dienst der Integration | nur explizit konfigurierte Fähigkeiten | keine proprietäre API |
 | E-Mail | über HA-Dienst nutzbar | vorhandener SMTP-Notify-Dienst bzw. `smtp.send_message`-Action | Nachricht, optionaler Titel und konfiguriertes Ziel | SMTP-Zugang und Providerzustellung nicht garantiert |
 | TTS | über HA-Dienst nutzbar | vorhandener TTS-/Lautsprecher-Dienst, z. B. `tts.speak` | Nachricht, optionaler Titel und konfigurierbare Service-Daten | keine Sprachausgabe in Tests |
-| FRITZ!Box-Klingeln | vorbereitet | vorhandener HA-Service | nur Klingelaktion, keine Sprache | Klingeln und TTS bleiben getrennt |
+| FRITZ!Box-Klingeln | implementiert über HA-Service | `fritz.dial` mit `device_id`, `number` und `max_ring_seconds` | isoliert getesteter Rufaufbau über den offiziellen HA-Aktionsvertrag; `**9` kann interne Telefone klingeln | FRITZ!Box Tools, Click-to-Dial und Berechtigungen müssen in der Zielinstanz aktiviert sein; keine Sprache |
 | SIP/PBX-TTS | vorbereitet | vorhandener konfigurierter HA-Service | nur bei explizit gemeldeten Fähigkeiten | kein eingebauter SIP-Client |
 
 `Telegram`, `WhatsApp`, E-Mail und TTS sind damit **nicht pauschal als direkt
 implementiert** zu verstehen: Sie sind nur über einen vorhandenen und
-explizit konfigurierten HA-Service nutzbar. FRITZ!Box und SIP/PBX bleiben
+explizit konfigurierten HA-Service nutzbar. Für FRITZ!Box ist der konkrete
+`fritz.dial`-Adapter implementiert; die externe FRITZ!Box-Konfiguration und
+ein isolierter Zielinstanz-Nachweis bleiben Voraussetzung. SIP/PBX bleibt
 vorbereitet, solange kein kompatibler HA-Service in der Zielumgebung
 nachgewiesen ist.
 
 Die offiziellen HA-Verträge sind [Telegram bot](https://www.home-assistant.io/integrations/telegram_bot/),
 [SMTP](https://www.home-assistant.io/integrations/smtp/) und die
-[TTS-Entity-/Service-Schnittstelle](https://contributors.home-assistant.io/core/entities/tts/).
+[TTS-Entity-/Service-Schnittstelle](https://contributors.home-assistant.io/core/entities/tts/)
+und [FRITZ!Box `fritz.dial`](https://www.home-assistant.io/actions/fritz.dial/).
 Diese Links dokumentieren die tatsächlich verfügbaren HA-Aktionen; sie sind
 keine Zusage, dass jede Zielinstallation den jeweiligen Provider aktiviert
 oder authentifiziert hat.
