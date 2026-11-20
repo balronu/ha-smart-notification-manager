@@ -158,10 +158,16 @@ async def test_missing_home_assistant_service_is_reported_without_call():
 
 
 def test_all_phase12_channels_have_explicit_home_assistant_service_contract():
-    channel_types = {item["channel_type"] for item in channel_catalog()}
+    catalog = channel_catalog()
+    channel_types = {item["channel_type"] for item in catalog}
     assert {"notify", "telegram", "whatsapp", "fritzbox", "sip_pbx", "tts", "email", "doorbell", "voice_call"} <= channel_types
-    for channel_type in channel_types:
+    for item in catalog:
+        channel_type = item["channel_type"]
         validate_channel_config(channel_type, {"service": "notify.test_target"})
+        assert isinstance(item["target_fields"], list)
+    assert "telegram_bot.send_message" in next(item["service_examples"] for item in catalog if item["channel_type"] == "telegram")
+    assert "smtp.send_message" in next(item["service_examples"] for item in catalog if item["channel_type"] == "email")
+    assert "tts.speak" in next(item["service_examples"] for item in catalog if item["channel_type"] == "tts")
     with pytest.raises(ValueError, match="domain.service"):
         validate_channel_config("telegram", {})
 

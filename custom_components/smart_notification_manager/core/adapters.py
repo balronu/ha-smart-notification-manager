@@ -6,24 +6,24 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 SUPPORTED_CHANNEL_TYPES = {
-    "notify": "Home-Assistant Notify",
-    "telegram": "Telegram über Home-Assistant-Dienst",
-    "whatsapp": "WhatsApp über Home-Assistant-Dienst",
-    "fritzbox": "FRITZ!Box über Home-Assistant-Dienst",
-    "sip_pbx": "SIP/PBX über Home-Assistant-Dienst",
-    "tts": "TTS über Home-Assistant-Dienst",
-    "email": "E-Mail über Home-Assistant-Dienst",
-    "doorbell": "Klingel über Home-Assistant-Dienst",
-    "voice_call": "Sprachanruf über Home-Assistant-Dienst",
-    "mobile": "Mobile App über Home-Assistant-Dienst",
-    "mail": "E-Mail-Alias über Home-Assistant-Dienst",
+    "notify": {"label": "Home-Assistant Notify", "service_examples": ["notify.send_message", "notify.<name>"], "target_fields": ["entity_id", "target"]},
+    "telegram": {"label": "Telegram über Home-Assistant-Dienst", "service_examples": ["telegram_bot.send_message", "notify.<telegram_entity>"], "target_fields": ["chat_id", "entity_id"]},
+    "whatsapp": {"label": "WhatsApp über Home-Assistant-Dienst", "service_examples": [], "target_fields": ["target", "entity_id"]},
+    "fritzbox": {"label": "FRITZ!Box über Home-Assistant-Dienst", "service_examples": [], "target_fields": ["entity_id", "target"]},
+    "sip_pbx": {"label": "SIP/PBX über Home-Assistant-Dienst", "service_examples": [], "target_fields": ["entity_id", "target"]},
+    "tts": {"label": "TTS über Home-Assistant-Dienst", "service_examples": ["tts.speak"], "target_fields": ["media_player_entity_id", "entity_id"]},
+    "email": {"label": "E-Mail über Home-Assistant-Dienst", "service_examples": ["smtp.send_message", "notify.<smtp_entity>"], "target_fields": ["entity_id", "target"]},
+    "doorbell": {"label": "Klingel über Home-Assistant-Dienst", "service_examples": [], "target_fields": ["entity_id", "target"]},
+    "voice_call": {"label": "Sprachanruf über Home-Assistant-Dienst", "service_examples": [], "target_fields": ["entity_id", "target"]},
+    "mobile": {"label": "Mobile App über Home-Assistant-Dienst", "service_examples": ["notify.mobile_app_<device>"], "target_fields": ["target", "entity_id"]},
+    "mail": {"label": "E-Mail-Alias über Home-Assistant-Dienst", "service_examples": ["notify.<mail_entity>"], "target_fields": ["entity_id", "target"]},
 }
 
 
 def channel_catalog() -> tuple[dict[str, str], ...]:
     """Return supported channel contracts without claiming provider APIs."""
 
-    return tuple({"channel_type": key, "label": label, "mode": "home_assistant_service"} for key, label in SUPPORTED_CHANNEL_TYPES.items())
+    return tuple({"channel_type": key, "label": value["label"], "mode": "home_assistant_service", "service_examples": value["service_examples"], "target_fields": value["target_fields"]} for key, value in SUPPORTED_CHANNEL_TYPES.items())
 
 
 def validate_channel_config(channel_type: str, config: dict[str, Any]) -> None:
