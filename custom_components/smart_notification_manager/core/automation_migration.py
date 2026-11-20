@@ -272,6 +272,8 @@ def build_hybrid_plan(automation: dict[str, Any], *, selected_paths: set[tuple[s
                     replace_in(choice.get("sequence", []), path + (f"choose[{index}]", "sequence"))
             if isinstance(value.get("repeat"), dict):
                 replace_in(value["repeat"].get("sequence", []), path + ("repeat", "sequence"))
+            if isinstance(value.get("parallel"), list):
+                replace_in(value["parallel"], path + ("parallel",))
 
     replace_in(transformed.get("action", transformed.get("actions", [])), ())
     return {"classification": "hybrid_migrierbar", "external_alarm_reference": reference, "original": _redact(automation), "transformed": _redact(transformed), "selected_paths": [list(path) for path in sorted(selected)], "preserved_features": ["Trigger", "Bedingungen", "Variablen", "Wartezeiten", "choose", "if", "repeat", "sonstige Aktionen"], "non_transferable": ["Originaldienst wird durch den Manager-Aufruf ersetzt"], "no_automatic_activation": True}
@@ -309,10 +311,18 @@ class AutomationMigrationStore:
                 connection.execute("INSERT INTO external_alarm_references(reference_id,automation_id,execution_ref,entity_id,rule_id,alarm_id,alarm_status,last_event,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)", (reference_id, automation_id, execution_ref, entity_id, rule_id, alarm_id, status, event, timestamp.isoformat(), timestamp.isoformat()))
             else:
                 reference_id, alarm_id, status = row["reference_id"], row["alarm_id"], row["alarm_status"]
-                if event == "resolve": status = "resolved"
-                elif event == "acknowledge": status = "acknowledged"
-                elif event == "open" and status == "resolved":
+                if row["entity_id"] != entity_id:
+                    raise ValueError("Externe Alarmreferenz gehört zu einer anderen Entität")
+                if event == "open" and status == "resolved":
                     raise ValueError("geschlossene externe Referenz darf nicht erneut geöffnet werden")
+                if event == "resolve":
+                    status = "resolved"
+                elif event == "acknowledge":
+                    if status == "resolved":
+                        raise ValueError("aufgelöste externe Referenz kann nicht bestätigt werden")
+                    status = "acknowledged"
+                elif event == "update" and status == "resolved":
+                    raise ValueError("aufgelöste externe Referenz kann nicht aktualisiert werden")
                 connection.execute("UPDATE external_alarm_references SET last_event=?,alarm_status=?,updated_at=? WHERE reference_id=?", (event, status, timestamp.isoformat(), reference_id))
             return {"reference_id": reference_id, "automation_id": automation_id, "execution_ref": execution_ref, "entity_id": entity_id, "rule_id": rule_id or (row["rule_id"] if row else None), "alarm_id": alarm_id, "alarm_status": status, "last_event": event}
         return await self.repository.async_run(operation)
@@ -361,8 +371,8 @@ class AutomationMigrationStore:
             if row is None:
                 raise ValueError("Migrationsplan nicht gefunden")
             plan = dict(row)
-            plan["draft"] = json.loads(plan.pop("draft_json"))
-            plan["original"] = json.loads(plan.pop("original_json"))
+            plan["draft"] = _redact(json.loads(plan.pop("draft_json")))
+            plan["original"] = _redact(json.loads(plan.pop("original_json")))
             audit = [dict(item) for item in connection.execute("SELECT action,details_json,occurred_at FROM automation_migration_audit WHERE plan_id=? ORDER BY occurred_at", (plan_id,))]
             for item in audit:
                 item["details"] = json.loads(item.pop("details_json"))
@@ -383,6 +393,8 @@ class AutomationMigrationStore:
         timestamp = now or datetime.now(UTC)
         plan_id = new_id()
         plan = {**source, "plan_id": plan_id, "status": "imported", "created_by": user_id, "created_at": timestamp.isoformat(), "updated_at": timestamp.isoformat()}
+        plan["draft"] = _redact(plan.get("draft"))
+        plan["original"] = _redact(plan.get("original", {}))
 
         def operation(connection):
             connection.execute("INSERT INTO automation_migration_plans(plan_id,automation_id,source_hash,classification,draft_json,original_json,status,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)", (plan_id, plan["automation_id"], plan["source_hash"], plan.get("classification", "nur_manuell"), json.dumps(plan.get("draft"), ensure_ascii=False), json.dumps(plan.get("original", {}), ensure_ascii=False), "imported", user_id, timestamp.isoformat(), timestamp.isoformat()))
