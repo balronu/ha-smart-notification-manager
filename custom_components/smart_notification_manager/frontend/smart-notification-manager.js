@@ -7,9 +7,16 @@
 
   class SmartNotificationRuleEditor extends HTMLElement {
     constructor() {
-      super(); this.attachShadow({ mode: "open" }); this._rules = []; this._entities = []; this._query = ""; this._entityQuery = ""; this._selectedId = null; this._draft = null; this._dirty = false; this._error = "";
+      super(); this.attachShadow({ mode: "open" }); this._rules = []; this._entities = []; this._query = ""; this._entityQuery = ""; this._selectedId = null; this._draft = null; this._dirty = false; this._error = ""; this._interactionActive = false; this._pendingData = null;
     }
-    set data(value) { this._rules = Array.isArray(value?.rules) ? value.rules : []; this._entities = Array.isArray(value?.entities) ? value.entities : []; this._onSave = value?.onSave; this._onDelete = value?.onDelete; this._onDuplicate = value?.onDuplicate; this._dirty = false; this.render(); }
+    set data(value) {
+      if (this._interactionActive) { this._pendingData = value; return; }
+      const preserveDraft = Boolean(this._draft && this._dirty);
+      if (preserveDraft) this.syncForm();
+      this._rules = Array.isArray(value?.rules) ? value.rules : []; this._entities = Array.isArray(value?.entities) ? value.entities : []; this._onSave = value?.onSave; this._onDelete = value?.onDelete; this._onDuplicate = value?.onDuplicate;
+      if (preserveDraft) return;
+      this._dirty = false; this.render();
+    }
     connectedCallback() { this.render(); }
     render() {
       const needle = this._query.trim().toLowerCase(); const visible = this._rules.filter((rule) => !needle || `${rule.name} ${rule.category} ${rule.area_name || ""}`.toLowerCase().includes(needle));
@@ -42,15 +49,23 @@
       if (this._clickHandler) this.shadowRoot.removeEventListener("click", this._clickHandler);
       if (this._inputHandler) this.shadowRoot.removeEventListener("input", this._inputHandler);
       if (this._changeHandler) this.shadowRoot.removeEventListener("change", this._changeHandler);
+      if (this._interactionStartHandler) this.shadowRoot.removeEventListener("pointerdown", this._interactionStartHandler);
+      if (this._interactionEndHandler) { this.shadowRoot.removeEventListener("pointerup", this._interactionEndHandler); this.shadowRoot.removeEventListener("focusout", this._interactionEndHandler); }
       this._clickHandler = (event) => this.click(event);
       this._inputHandler = (event) => { if (event.target.matches('[data-field="search"]')) { this._query = event.target.value; this.refreshList(); } else if (event.target.matches('[data-field="entity-search"]')) { this._entityQuery = event.target.value; this.refreshPickers(); } else if (event.target.matches("[data-field], [data-trigger-field], [data-condition-field], [data-trigger-entity], [data-condition-day]")) this._dirty = true; };
       this._changeHandler = (event) => this.change(event);
+      this._interactionStartHandler = () => { this._interactionActive = true; };
+      this._interactionEndHandler = () => { setTimeout(() => { this._interactionActive = false; if (this._pendingData !== null) { const pending = this._pendingData; this._pendingData = null; this.data = pending; } }, 0); };
       this.shadowRoot.addEventListener("click", this._clickHandler);
       this.shadowRoot.addEventListener("input", this._inputHandler);
       this.shadowRoot.addEventListener("change", this._changeHandler);
+      this.shadowRoot.addEventListener("pointerdown", this._interactionStartHandler);
+      this.shadowRoot.addEventListener("pointerup", this._interactionEndHandler);
+      this.shadowRoot.addEventListener("focusout", this._interactionEndHandler);
     }
     change(event) {
       const target = event.target;
+      if (target.matches("[data-field]")) { this._draft[target.dataset.field] = target.type === "checkbox" ? target.checked : target.value; this._dirty = true; return; }
       if (target.matches("[data-trigger-field]")) { const trigger = this._draft.triggers[Number(target.closest("[data-trigger-index]").dataset.triggerIndex)]; const key = target.dataset.triggerField; trigger[key] = ["minimum_duration_seconds", "delay_seconds", "threshold", "upper_threshold", "hysteresis"].includes(key) ? (target.value === "" ? null : Number(target.value)) : target.value; this._dirty = true; if (key === "kind" || key === "comparison") this.render(); return; }
       if (target.matches("[data-trigger-entity]")) { const trigger = this._draft.triggers[Number(target.dataset.triggerIndex)]; const ids = new Set(trigger.entity_ids || []); target.checked ? ids.add(target.dataset.triggerEntity) : ids.delete(target.dataset.triggerEntity); trigger.entity_ids = [...ids]; this._dirty = true; return; }
       if (target.matches("[data-condition-field], [data-condition-day]")) { this.updateCondition(target); this._dirty = true; if (target.dataset.conditionField === "kind" || target.dataset.conditionField === "comparison") this.render(); }
@@ -77,7 +92,12 @@
 
   class SmartNotificationManagerPanel extends HTMLElement {
     constructor() { super(); this.attachShadow({ mode: "open" }); this._editor = document.createElement("smart-notification-rule-editor"); this._recipients = document.createElement("smart-notification-recipient-manager"); this.shadowRoot.append(this._editor, this._recipients); }
-    set hass(value) { this._hass = value; this.load(); }
+    set hass(value) {
+      const initialConnection = !this._hass;
+      const connectionChanged = initialConnection || this._hass.connection !== value?.connection;
+      this._hass = value;
+      if (connectionChanged) this.load();
+    }
     connectedCallback() { this.load(); }
     async load() { if (!this._hass?.callWS) return; try { const data = await this._hass.callWS({ type: "smart_notification_manager/list" }); this._editor.data = { rules: data.rules, entities: data.entities, onSave: (rule) => this.save(rule), onDelete: (id) => this.remove(id), onDuplicate: (rule) => this.duplicate(rule) }; const delivery = await this._hass.callWS({ type: "smart_notification_manager/recipient/list" }); this._recipients.data = { ...delivery, onSave: (recipient) => this.saveRecipient(recipient), onGroupSave: (group) => this.saveGroup(group) }; } catch (error) { this._editor.data = { rules: [], entities: [] }; this._editor._error = "Regeln und Empfänger konnten nicht geladen werden."; this._editor.render(); } }
     async save(rule) { try { await this._hass.callWS({ type: "smart_notification_manager/save", rule }); await this.load(); } catch (error) { this._editor._error = "Die Regel konnte nicht gespeichert werden. Prüfe die Eingaben oder die Berechtigung."; this._editor.render(); } }

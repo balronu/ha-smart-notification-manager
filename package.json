@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "e2e:phase12": "node tests/e2e/phase12-browser.mjs"
+    "e2e:phase12": "node tests/e2e/phase12-browser.mjs",
+    "e2e:editor": "node tests/e2e/editor-select.mjs"
   },
   "devDependencies": {
     "playwright-core": "1.65.1"
