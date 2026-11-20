@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from .repository import SQLiteRepository
@@ -36,8 +36,16 @@ class StatisticsStore:
             clauses.append("started_at >= ?")
             args.append(date_from)
         if date_to:
-            clauses.append("started_at <= ?")
-            args.append(date_to)
+            # The UI sends calendar dates. Treat the end date as inclusive;
+            # comparing an ISO timestamp directly with ``2026-01-02`` would
+            # otherwise exclude every event on that day.
+            if len(date_to) == 10:
+                end = datetime.fromisoformat(date_to).date() + timedelta(days=1)
+                clauses.append("started_at < ?")
+                args.append(end.isoformat())
+            else:
+                clauses.append("started_at <= ?")
+                args.append(date_to)
         if priority:
             clauses.append("priority = ?")
             args.append(priority)
@@ -106,9 +114,12 @@ class StatisticsStore:
 def validate_statistics_filters(payload: dict[str, Any]) -> dict[str, str | None]:
     """Validate public filter values before they reach the SQL boundary."""
 
+    source = payload.get("filters", payload)
+    if not isinstance(source, dict):
+        raise TypeError("Statistikfilter muss ein Objekt sein")
     result: dict[str, str | None] = {}
     for key in ("date_from", "date_to", "priority", "state"):
-        value = payload.get(key)
+        value = source.get(key)
         if value is not None and not isinstance(value, str):
             raise ValueError(f"Statistikfilter {key} muss Text sein")
         result[key] = value
