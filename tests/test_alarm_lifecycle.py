@@ -156,7 +156,7 @@ async def test_closing_alarm_suppresses_pending_delivery_and_allows_linked_retri
     alarm, _ = await store.async_trigger(rule_id=rule.rule_id, entity_id="binary_sensor.retrigger", now=now)
     recipients = RecipientStore(repository)
     await recipients.async_save_recipient(Recipient("owner", "Owner", True, (RecipientDevice("phone", "Telefon", "mobile", True, True),)))
-    await recipients.async_save_channel({"channel_id": "mobile", "channel_type": "notify", "display_name": "Mobile", "config": {}})
+    await recipients.async_save_channel({"channel_id": "mobile", "channel_type": "notify", "display_name": "Mobile", "config": {"service": "notify.mobile_app_phone"}})
     delivery = DeliveryStore(repository)
     await delivery.async_enqueue(DeliveryRequest("attempt-retrigger", "owner", "Alarm", "Text", {"alarm_id": alarm.alarm_id}), idempotency_key="alarm-retrigger", channel_id="mobile", alarm_id=alarm.alarm_id)
     closed = await store.async_close(alarm.alarm_id, user_id="owner", now=now, reason="geprüft")

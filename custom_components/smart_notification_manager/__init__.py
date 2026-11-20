@@ -24,6 +24,7 @@ from .core.repeat_delivery import RepeatEscalationDeliveryPlanner
 from .core.repository import SQLiteRepository
 from .core.rule_store import RuleStore
 from .core.rule_templates import RuleTemplateStore
+from .core.statistics import StatisticsStore
 from .websocket import async_register as async_register_websocket
 
 FRONTEND_URL_BASE = "/smart_notification_manager_static"
@@ -62,6 +63,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     runtime["repeat_delivery_planner"] = RepeatEscalationDeliveryPlanner(
         runtime["alarm_store"], runtime["delivery_store"], runtime["policy_store"]
     )
+    runtime["statistics_store"] = StatisticsStore(repository)
     if hasattr(hass, "config_entries") and hasattr(hass.config_entries, "async_forward_entry_setups"):
         runtime["metrics_coordinator"] = await async_get_coordinator(hass, repository)
         await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "binary_sensor", "switch"])
@@ -105,6 +107,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     runtime.pop("delivery_store", None)
     runtime.pop("delivery_service", None)
     runtime.pop("repeat_delivery_planner", None)
+    runtime.pop("statistics_store", None)
     runtime.pop("alarm_store", None)
     runtime.pop("alarm_center_store", None)
     runtime.pop("automation_migration_store", None)
