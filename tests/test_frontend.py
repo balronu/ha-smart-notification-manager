@@ -49,6 +49,7 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert "data-filter=\"date_to\"" in source
     assert "data-filter=\"priority\"" in source
     assert "data-filter=\"state\"" in source
+    assert "Monatswerte" in source
     assert "Auswahl quittieren" in source
     assert "teilweise quittiert" in source
     assert "vollständig quittiert" in source

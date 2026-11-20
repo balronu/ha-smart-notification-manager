@@ -61,3 +61,22 @@ async def test_statistics_persist_across_restart_and_cover_alarm_delivery_dimens
 def test_statistics_filters_reject_non_text_values():
     with pytest.raises(ValueError, match="muss Text sein"):
         validate_statistics_filters({"priority": 1})
+
+
+def test_statistics_filters_accept_frontend_envelope():
+    assert validate_statistics_filters({"filters": {"priority": "critical", "state": "active"}}) == {
+        "date_from": None,
+        "date_to": None,
+        "priority": "critical",
+        "state": "active",
+    }
+
+
+@pytest.mark.asyncio
+async def test_date_to_filter_includes_the_complete_calendar_day(tmp_path: Path):
+    repository = SQLiteRepository(tmp_path / "statistics.sqlite3")
+    rule = await RuleStore(repository).async_save(valid_storage_rule(), EditorAccess("owner", frozenset({"edit"})))
+    alarms = AlarmLifecycleStore(repository)
+    await alarms.async_trigger(rule_id=rule.rule_id, entity_id="binary_sensor.door", priority="normal", now=datetime(2026, 1, 2, 23, 59, tzinfo=UTC))
+    summary = await StatisticsStore(repository).async_summary(date_from="2026-01-02", date_to="2026-01-02")
+    assert summary["totals"]["alarms"] == 1
