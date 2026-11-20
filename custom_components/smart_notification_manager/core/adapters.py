@@ -124,6 +124,7 @@ class HAServiceAdapter:
         service: str,
         capabilities: ChannelCapabilities,
         service_data: dict[str, Any] | None = None,
+        target_field: str | None = None,
     ) -> None:
         self.hass = hass
         self.channel_type = channel_type
@@ -131,6 +132,7 @@ class HAServiceAdapter:
         self.service = service
         self._capabilities = capabilities
         self._service_data = dict(service_data or {})
+        self._target_field = target_field
 
     @property
     def capabilities(self) -> ChannelCapabilities:
@@ -149,6 +151,9 @@ class HAServiceAdapter:
         data = dict(self._service_data)
         data.update(request.payload.get("service_data", {}))
         data["message"] = request.message
+        target = request.payload.get("recipient_target")
+        if self._target_field and target:
+            data[self._target_field] = target
         if self._capabilities.supports_title and request.title:
             data.setdefault("title", request.title)
         await self.hass.services.async_call(self.domain, self.service, data, blocking=True)
@@ -182,6 +187,7 @@ def adapter_from_channel(hass: Any, channel: dict[str, Any]) -> HAServiceAdapter
         service=service,
         capabilities=capabilities,
         service_data=config.get("service_data"),
+        target_field=config.get("target_field"),
     )
 
 

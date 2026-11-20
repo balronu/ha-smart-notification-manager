@@ -118,6 +118,26 @@
   const phase3Click = SmartNotificationPhase3Manager.prototype.click;
   SmartNotificationPhase3Manager.prototype.render = function () { phase3Render.call(this); const cards = this.shadowRoot.querySelectorAll(".card"); const add = (row, action, id, label) => { if (!row || row.querySelector(`[data-action="${action}"]`)) return; const button = document.createElement("button"); button.className = "button"; button.dataset.action = action; button.dataset.id = id; button.textContent = label; let actions = row.querySelector(".actions"); if (!actions) { actions = document.createElement("div"); actions.className = "actions"; row.append(actions); } actions.append(button); }; (cards[0]?.querySelectorAll(".row") || []).forEach((row, i) => add(row, "edit-recipient", this.state.recipients?.[i]?.recipient_id, "Bearbeiten")); (cards[1]?.querySelectorAll(".row") || []).forEach((row, i) => add(row, "edit-channel", this.state.channels?.[i]?.channel_id, "Bearbeiten")); (cards[2]?.querySelectorAll(".row") || []).forEach((row, i) => add(row, "edit-channel-group", this.state.channel_groups?.[i]?.channel_group_id, "Bearbeiten")); };
   SmartNotificationPhase3Manager.prototype.click = function (event) { const target = event.target.closest("[data-action]"); const action = target?.dataset.action; if (action === "edit-recipient") { const item = (this.state.recipients || []).find((r) => r.recipient_id === target.dataset.id); if (item) this.form = { type: "recipient", name: item.display_name, id: item.recipient_id, devices: (item.devices || []).map((d) => `${d.device_id}:${d.channel_id}`).join(", ") }; return this.render(); } if (action === "edit-channel") { const item = (this.state.channels || []).find((c) => c.channel_id === target.dataset.id); if (item) this.form = { type: "channel", name: item.display_name, id: item.channel_id, typeName: item.channel_type, service: item.config?.service || "" }; return this.render(); } if (action === "edit-channel-group") { const item = (this.state.channel_groups || []).find((g) => g.channel_group_id === target.dataset.id); if (item) this.form = { type: "channel-group", name: item.display_name, id: item.channel_group_id, channels: (item.channel_ids || []).join(", ") }; return this.render(); } if (action === "edit-template") { const item = (this.state.templates || []).find((t) => t.template_id === target.dataset.id); if (item) this.form = { type: "template", name: item.name, id: item.template_id, body: item.body }; return this.render(); } return phase3Click.call(this, event); };
+  const phase3ChannelForm = SmartNotificationPhase3Manager.prototype.formHtml;
+  SmartNotificationPhase3Manager.prototype.formHtml = function (form) {
+    if (form.type === "channel") {
+      const catalog = this.state.channel_catalog || [];
+      const options = catalog.map((item) => `<option value="${this.esc(item.channel_type)}" ${item.channel_type === form.typeName ? "selected" : ""}>${this.esc(item.label)}</option>`).join("");
+      return `<div class="card"><h3>Kanal speichern</h3><div class="grid"><label class="field">ID<input data-form="id" value="${this.esc(form.id)}"></label><label class="field">Typ<select data-form="type">${options || `<option value="${this.esc(form.typeName)}">${this.esc(form.typeName)}</option>`}</select></label><label class="field wide">Anzeigename<input data-form="name" value="${this.esc(form.name)}"></label><label class="field wide">HA-Service (domain.service)<input data-form="service" value="${this.esc(form.service)}" placeholder="notify.mobile_app_phone"></label><label class="field wide">Empfänger-Zielfeld (optional)<input data-form="target_field" value="${this.esc(form.target_field || "")}" placeholder="target oder entity_id"></label></div><p class="tag">Der ausgewählte Typ wird nur über einen vorhandenen Home-Assistant-Dienst ausgeführt.</p><div class="actions"><button class="button primary" data-action="save-channel">Speichern</button></div></div>`;
+    }
+    return phase3ChannelForm.call(this, form);
+  };
+  const phase3ChannelClick = SmartNotificationPhase3Manager.prototype.click;
+  SmartNotificationPhase3Manager.prototype.click = function (event) {
+    const action = event.target.closest("[data-action]")?.dataset.action;
+    if (action === "save-channel") {
+      this.state.onSaveChannel?.({ channel_id: this.formValue("id"), channel_type: this.formValue("type"), display_name: this.formValue("name"), enabled: true, config: { service: this.formValue("service"), target_field: this.formValue("target_field") || undefined } });
+      this.form = null;
+      this.render();
+      return;
+    }
+    return phase3ChannelClick.call(this, event);
+  };
   const PHASE4_COMMANDS = ["smart_notification_manager/alarm/acknowledge", "smart_notification_manager/alarm/acknowledge_many", "smart_notification_manager/alarm/resolve", "smart_notification_manager/alarm/close"];
   class SmartNotificationPhase4AlarmManager extends HTMLElement {
     constructor() { super(); this.attachShadow({ mode: "open" }); this.alarms = []; this.events = {}; }
