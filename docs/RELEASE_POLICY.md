@@ -15,7 +15,7 @@ v0.1.0-beta.1
 Die aktuelle manuelle Test-Beta ist:
 
 ```text
-v0.1.0-beta.3
+v0.1.0-beta.4
 ```
 
 Diese Beta ist kein Nachweis der vollständigen Produktabnahme. Die

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="de">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Notification Manager – Panel-Lifecycle-Fixture</title></head>
+  <body>
+    <smart-notification-manager-panel></smart-notification-manager-panel>
+    <script src="smart-notification-manager.js"></script>
+    <script>
+      const panel = document.querySelector("smart-notification-manager-panel");
+      let listCalls = 0;
+      const connection = {};
+      const entities = [{entity_id: "sensor.wohnzimmer_temperatur", friendly_name: "Wohnzimmer Temperatur", area_id: "wohnzimmer", area_name: "Wohnzimmer", entity_type: "sensor", state: "21.4 °C"}];
+      const callWS = async (message) => {
+        if (message.type === "smart_notification_manager/list") {
+          listCalls += 1;
+          if (listCalls > 1) await new Promise((resolve) => setTimeout(resolve, 250));
+          return {rules: [], entities};
+        }
+        if (message.type === "smart_notification_manager/recipient/list") return {recipients: [], groups: [], channels: []};
+        if (message.type === "smart_notification_manager/statistics/get") return {totals: {}, daily: {}, monthly: {}, filters: message.filters || {}};
+        if (message.type.includes("/alarm_center/list")) return {alarms: [], total: 0, page: 1, pages: 1};
+        if (message.type.includes("/alarm/list")) return {alarms: []};
+        if (message.type.includes("/policy/list")) return {quiet_hours: [], pauses: [], rate_limits: [], decisions: []};
+        if (message.type.includes("/delivery/list")) return {jobs: []};
+        return {};
+      };
+      panel.hass = {connection, callWS};
+      window.__reloadPanel = () => panel.load();
+      window.__panel = panel;
+    </script>
+  </body>
+</html>

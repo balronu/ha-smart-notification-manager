@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.1.0-beta.4 – Panel-Lebenszyklus und Fokusverlust
+
+### Deutsch
+
+- Behebt den nach Beta.3 weiterhin reproduzierbaren Fokusverlust nach dem
+  Öffnen eines frischen Regelentwurfs.
+- Verspätete Antworten aus Panel-Ladevorgängen ersetzen den aktiven Editor
+  nicht mehr; Bereichs- und Prioritätsauswahl bleiben erhalten.
+- Ergänzt einen opt-in, datensparsamen Diagnosemodus mit Build-Kennung sowie
+  einen echten Chromium-Lebenszyklus-Regressionstest mit verzögerten
+  WebSocket-Antworten und wiederholten `hass`-Updates.
+
+### English
+
+- Fixes focus loss that remained reproducible after opening a fresh rule draft
+  in beta.3.
+- Late panel load responses no longer replace the active editor; area and
+  priority selections remain stable.
+- Adds an opt-in privacy-preserving diagnostic mode with a build ID and a real
+  Chromium lifecycle regression test using delayed WebSocket responses and
+  repeated `hass` updates.
+
 ## v0.1.0-beta.3 – Stabile Dropdown-Auswahl
 
 ### Deutsch

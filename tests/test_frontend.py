@@ -80,6 +80,11 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert (FRONTEND.parent / "phase-9-automation-migration-fixture.html").exists()
     assert (FRONTEND.parent / "phase-12-statistics-fixture.html").exists()
     assert (FRONTEND.parent.parent / "tests" / "e2e" / "editor-select.mjs").exists()
+    assert (FRONTEND.parent.parent / "tests" / "e2e" / "panel-lifecycle.mjs").exists()
+    assert (FRONTEND.parent / "panel-lifecycle-fixture.html").exists()
+    assert 'const BUILD_ID = "beta4-editor-lifecycle"' in source
+    assert 'data-applied-without-editor-render' in source
+    assert 'preserveDraft = Boolean(this._draft)' in source
     phase9 = FRONTEND.parent / "phase-9-automation-migration.js"
     assert phase9.exists()
     source9 = phase9.read_text(encoding="utf-8")

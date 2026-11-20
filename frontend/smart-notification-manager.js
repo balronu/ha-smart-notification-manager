@@ -1,6 +1,19 @@
 /* Smart Notification Manager – visual German rule editor, Phase 2. */
 (function () {
   "use strict";
+  const BUILD_ID = "beta4-editor-lifecycle";
+  let nextDiagnosticInstanceId = 1;
+  const diagnosticsEnabled = () => {
+    try {
+      return globalThis.localStorage?.getItem("smart_notification_manager_debug") === "1" || new URLSearchParams(globalThis.location?.search || "").get("snm_debug") === "1";
+    } catch (_error) {
+      return false;
+    }
+  };
+  const diagnosticLog = (instance, event, details = {}) => {
+    if (!diagnosticsEnabled()) return;
+    console.info("[smart_notification_manager]", { build_id: BUILD_ID, instance_id: instance, event, ...details });
+  };
   const PRIORITIES = { info: "Info", normal: "Normal", warning: "Warnung", critical: "Critical" };
   const CONDITION_LABELS = { entity_state: "Entitätszustand", numeric: "Numerischer Wert", presence: "Anwesenheit", weekday: "Wochentag", time_window: "Zeitfenster" };
   const DAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
@@ -10,18 +23,21 @@
       super(); this.attachShadow({ mode: "open" }); this._rules = []; this._entities = []; this._query = ""; this._entityQuery = ""; this._selectedId = null; this._draft = null; this._dirty = false; this._error = ""; this._interactionActive = false; this._pendingData = null;
     }
     set data(value) {
-      if (this._interactionActive) { this._pendingData = value; return; }
-      const preserveDraft = Boolean(this._draft && this._dirty);
+      if (this._interactionActive) { this._pendingData = value; diagnosticLog(this._diagnosticInstanceId, "data-deferred-during-interaction"); return; }
+      const preserveDraft = Boolean(this._draft);
       if (preserveDraft) this.syncForm();
       this._rules = Array.isArray(value?.rules) ? value.rules : []; this._entities = Array.isArray(value?.entities) ? value.entities : []; this._onSave = value?.onSave; this._onDelete = value?.onDelete; this._onDuplicate = value?.onDuplicate;
-      if (preserveDraft) return;
+      if (preserveDraft) { diagnosticLog(this._diagnosticInstanceId, "data-applied-without-editor-render", { draft_active: true, dirty: this._dirty }); return; }
       this._dirty = false; this.render();
     }
     connectedCallback() { this.render(); }
-    render() {
+    render(reason = "render") {
+      const activeBefore = this.shadowRoot.activeElement;
+      this._renderCount = (this._renderCount || 0) + 1;
       const needle = this._query.trim().toLowerCase(); const visible = this._rules.filter((rule) => !needle || `${rule.name} ${rule.category} ${rule.area_name || ""}`.toLowerCase().includes(needle));
       this.shadowRoot.innerHTML = `<style>${this.styles()}</style><main aria-label="Smart Notification Manager Regelverwaltung"><header class="topbar"><div><p class="eyebrow">Smart Notification Manager</p><h1>Regeln</h1></div><button class="primary" data-action="new">＋ Neue Regel</button></header><section class="workspace"><aside class="list" aria-label="Regelübersicht"><label class="search">⌕<input data-field="search" placeholder="Regeln suchen …" value="${this.escape(this._query)}" /></label><div class="filters"><button class="filter active">Alle</button><button class="filter">Aktiv</button><button class="filter">Deaktiviert</button></div><div class="rule-items">${visible.length ? visible.map((rule) => this.ruleItem(rule)).join("") : '<p class="empty">Keine Regeln gefunden.</p>'}</div></aside><section class="editor" aria-label="Visueller Regeleditor">${this._draft ? this.editor() : this.welcome()}</section></section></main>`;
       this.bind();
+      diagnosticLog(this._diagnosticInstanceId, "render", { reason, render_count: this._renderCount, active_before_connected: Boolean(activeBefore?.isConnected), active_replaced: Boolean(activeBefore && !activeBefore.isConnected), draft_active: Boolean(this._draft) });
     }
     welcome() { return `<div class="welcome"><div class="welcome-icon">✓</div><h2>Benachrichtigungsregeln</h2><p>Erstelle Regeln mit sichtbaren Auslösern und Bedingungen. Die Vorschau erklärt die Regel in verständlichem Deutsch.</p><button class="primary" data-action="new">Neue Regel erstellen</button></div>`; }
     ruleItem(rule) { return `<button class="rule-item${rule.rule_id === this._selectedId ? " selected" : ""}" data-rule="${this.escape(rule.rule_id)}"><span class="status ${rule.enabled ? "on" : "off"}"></span><span class="rule-text"><strong>${this.escape(rule.name)}</strong><small>${this.escape(rule.category)} · ${this.escape(PRIORITIES[rule.priority] || rule.priority)}</small></span><span class="chevron">›</span></button>`; }
@@ -51,17 +67,23 @@
       if (this._changeHandler) this.shadowRoot.removeEventListener("change", this._changeHandler);
       if (this._interactionStartHandler) this.shadowRoot.removeEventListener("pointerdown", this._interactionStartHandler);
       if (this._interactionEndHandler) { this.shadowRoot.removeEventListener("pointerup", this._interactionEndHandler); this.shadowRoot.removeEventListener("focusout", this._interactionEndHandler); }
+      if (this._focusHandler) this.shadowRoot.removeEventListener("focusin", this._focusHandler);
+      if (this._blurHandler) this.shadowRoot.removeEventListener("focusout", this._blurHandler);
       this._clickHandler = (event) => this.click(event);
       this._inputHandler = (event) => { if (event.target.matches('[data-field="search"]')) { this._query = event.target.value; this.refreshList(); } else if (event.target.matches('[data-field="entity-search"]')) { this._entityQuery = event.target.value; this.refreshPickers(); } else if (event.target.matches("[data-field], [data-trigger-field], [data-condition-field], [data-trigger-entity], [data-condition-day]")) this._dirty = true; };
       this._changeHandler = (event) => this.change(event);
       this._interactionStartHandler = () => { this._interactionActive = true; };
       this._interactionEndHandler = () => { setTimeout(() => { this._interactionActive = false; if (this._pendingData !== null) { const pending = this._pendingData; this._pendingData = null; this.data = pending; } }, 0); };
+      this._focusHandler = (event) => diagnosticLog(this._diagnosticInstanceId, "focus", { element: event.target.dataset?.field || event.target.dataset?.triggerField || event.target.dataset?.conditionField || event.target.tagName });
+      this._blurHandler = (event) => diagnosticLog(this._diagnosticInstanceId, "blur", { element: event.target.dataset?.field || event.target.dataset?.triggerField || event.target.dataset?.conditionField || event.target.tagName });
       this.shadowRoot.addEventListener("click", this._clickHandler);
       this.shadowRoot.addEventListener("input", this._inputHandler);
       this.shadowRoot.addEventListener("change", this._changeHandler);
       this.shadowRoot.addEventListener("pointerdown", this._interactionStartHandler);
       this.shadowRoot.addEventListener("pointerup", this._interactionEndHandler);
       this.shadowRoot.addEventListener("focusout", this._interactionEndHandler);
+      this.shadowRoot.addEventListener("focusin", this._focusHandler);
+      this.shadowRoot.addEventListener("focusout", this._blurHandler);
     }
     change(event) {
       const target = event.target;
@@ -72,7 +94,7 @@
     }
     click(event) {
       const target = event.target.closest("[data-action], [data-rule]"); if (!target) return; const action = target.dataset.action;
-      if (target.dataset.rule) return this.open(target.dataset.rule); if (action === "new") return this.open(); if (action === "close") { this._draft = null; this._error = ""; this._dirty = false; return this.render(); } if (action === "save") return this.save(); if (action === "delete") return this._onDelete?.(this._draft.rule_id); if (action === "duplicate") return this._onDuplicate?.(this._draft);
+      if (target.dataset.rule) return this.open(target.dataset.rule); if (action === "new") return this.open(); if (action === "close") { this._draft = null; this._error = ""; this._dirty = false; return this.render("close"); } if (action === "save") return this.save(); if (action === "delete") return this._onDelete?.(this._draft.rule_id); if (action === "duplicate") return this._onDuplicate?.(this._draft);
       if (action === "add-trigger") { this.syncForm(); this._draft.triggers.push({ kind: "state", entity_ids: [], to_state: "on", from_state: null, minimum_duration_seconds: 0, delay_seconds: 0, unknown_policy: "ignore", unavailable_policy: "ignore" }); this._dirty = true; return this.render(); }
       if (action === "remove-trigger") { this.syncForm(); this._draft.triggers.splice(Number(target.dataset.triggerIndex), 1); this._dirty = true; return this.render(); }
       if (action === "add-condition") { this.syncForm(); this.conditionAt(target.dataset.conditionPath).children.push({ kind: "entity_state", value: { entity_id: this._entities[0]?.entity_id || "", state: "on" }, children: [] }); this._dirty = true; return this.render(); }
@@ -91,14 +113,15 @@
   }
 
   class SmartNotificationManagerPanel extends HTMLElement {
-    constructor() { super(); this.attachShadow({ mode: "open" }); this._editor = document.createElement("smart-notification-rule-editor"); this._recipients = document.createElement("smart-notification-recipient-manager"); this.shadowRoot.append(this._editor, this._recipients); }
+    constructor() { super(); this.attachShadow({ mode: "open" }); this._diagnosticInstanceId = `panel-${nextDiagnosticInstanceId++}`; this.dataset.snmBuild = BUILD_ID; this._editor = document.createElement("smart-notification-rule-editor"); this._editor._diagnosticInstanceId = `${this._diagnosticInstanceId}-editor`; this._recipients = document.createElement("smart-notification-recipient-manager"); this.shadowRoot.append(this._editor, this._recipients); diagnosticLog(this._diagnosticInstanceId, "constructed"); }
     set hass(value) {
       const initialConnection = !this._hass;
       const connectionChanged = initialConnection || this._hass.connection !== value?.connection;
       this._hass = value;
+      diagnosticLog(this._diagnosticInstanceId, "hass-update", { connection_changed: connectionChanged });
       if (connectionChanged) this.load();
     }
-    connectedCallback() { this.load(); }
+    connectedCallback() { diagnosticLog(this._diagnosticInstanceId, "connected"); this.load(); }
     async load() { if (!this._hass?.callWS) return; try { const data = await this._hass.callWS({ type: "smart_notification_manager/list" }); this._editor.data = { rules: data.rules, entities: data.entities, onSave: (rule) => this.save(rule), onDelete: (id) => this.remove(id), onDuplicate: (rule) => this.duplicate(rule) }; const delivery = await this._hass.callWS({ type: "smart_notification_manager/recipient/list" }); this._recipients.data = { ...delivery, onSave: (recipient) => this.saveRecipient(recipient), onGroupSave: (group) => this.saveGroup(group) }; } catch (error) { this._editor.data = { rules: [], entities: [] }; this._editor._error = "Regeln und Empfänger konnten nicht geladen werden."; this._editor.render(); } }
     async save(rule) { try { await this._hass.callWS({ type: "smart_notification_manager/save", rule }); await this.load(); } catch (error) { this._editor._error = "Die Regel konnte nicht gespeichert werden. Prüfe die Eingaben oder die Berechtigung."; this._editor.render(); } }
     async remove(ruleId) { try { await this._hass.callWS({ type: "smart_notification_manager/delete", rule_id: ruleId }); await this.load(); } catch (error) { this._editor._error = "Die Regel konnte nicht gelöscht werden."; this._editor.render(); } }
