@@ -22,12 +22,16 @@ jobs:
       - run: uv run pytest
       - run: uv run ruff check .
       - run: uv run python -m compileall custom_components
+      - name: independent Playwright fixture E2E
+        run: |
+          npm ci --ignore-scripts
+          npm run e2e:phase12
       - run: uv run python -m json.tool custom_components/smart_notification_manager/manifest.json >/dev/null
       - run: uv run python -m json.tool custom_components/smart_notification_manager/strings.json >/dev/null
       - run: uv run python -m json.tool hacs.json >/dev/null
       - name: secret scan
         run: |
-          uvx --from detect-secrets detect-secrets scan --all-files --force-use-all-plugins --exclude-files '(^|/)(\.git|\.venv|__pycache__|\.pytest_cache|\.ruff_cache)/' > /tmp/smart-notification-manager-secret-scan.json
+          uvx --from detect-secrets detect-secrets scan --all-files --force-use-all-plugins --exclude-files '(^|/)(\.git|\.venv|__pycache__|\.pytest_cache|\.ruff_cache|node_modules|artifacts/.*\.(png|trace\.zip)$)' > /tmp/smart-notification-manager-secret-scan.json
           uv run python -c 'import json; data=json.load(open("/tmp/smart-notification-manager-secret-scan.json")); raise SystemExit("Secret-Scan hat Treffer" if data["results"] else 0)'
       - name: secret scanner sentinel test
         shell: bash

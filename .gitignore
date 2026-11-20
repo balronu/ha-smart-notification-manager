@@ -4,6 +4,7 @@ __pycache__/
 .coverage
 htmlcov/
 .venv/
+node_modules/
 *.py[cod]
 *.db
 *.sqlite
@@ -11,4 +12,3 @@ htmlcov/
 dist/
 build/
 *.egg-info/
-
