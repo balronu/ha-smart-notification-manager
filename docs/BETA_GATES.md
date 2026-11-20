@@ -10,8 +10,9 @@ Die verbindlichen Gate-Prüfungen werden nicht durch lokale Fixtures ersetzt.
   unveränderlichen CI-Commit ausgeführt.
 - **#18 HACS:** wird im CI über `hacs/action` als Integration validiert. Der
   offizielle Lauf muss nach der autorisierten Public-Schaltung gegen den
-  unveränderlichen Merge-Commit erfolgreich sein; bis dahin bleibt das Gate
-  offen.
+  unveränderlichen Merge-Commit erfolgreich sein. Ein Lauf aus dem vorher
+  privaten Push-Event wird als übersprungen dokumentiert und zählt nicht als
+  Nachweis; der folgende öffentliche PR-Lauf ist der maßgebliche Gate-Test.
 - **#19 Secret-Scan:** `detect-secrets` prüft den aktuellen Baum und ein
   Dummy-Sentinel; zusätzlich wurde die Git-Historie mit 358 Blobs geprüft.
 - **#24 Wiederholung/Eskalation:** wird über den zentralen, policy-geprüften
