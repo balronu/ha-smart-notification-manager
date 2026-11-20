@@ -25,6 +25,7 @@ from .core.repository import SQLiteRepository
 from .core.rule_store import RuleStore
 from .core.rule_templates import RuleTemplateStore
 from .core.statistics import StatisticsStore
+from .diagnostics import SmartNotificationManagerDiagnosticsView
 from .websocket import async_register as async_register_websocket
 
 FRONTEND_URL_BASE = "/smart_notification_manager_static"
@@ -70,6 +71,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if hasattr(hass, "config"):
         async_register_websocket(hass)
     if getattr(hass, "http", None) is not None and not runtime.get("frontend_registered"):
+        hass.http.register_view(SmartNotificationManagerDiagnosticsView)
         await hass.http.async_register_static_paths(
             [StaticPathConfig(f"{FRONTEND_URL_BASE}", str(FRONTEND_PATH), cache_headers=False)]
         )

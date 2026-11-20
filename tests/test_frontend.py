@@ -82,6 +82,8 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert (FRONTEND.parent.parent / "tests" / "e2e" / "editor-select.mjs").exists()
     assert (FRONTEND.parent.parent / "tests" / "e2e" / "panel-lifecycle.mjs").exists()
     assert (FRONTEND.parent / "panel-lifecycle-fixture.html").exists()
+    assert (FRONTEND.parent.parent / "tests" / "test_diagnostics.py").exists()
+    assert (FRONTEND.parent.parent / "tests" / "e2e" / "diagnostics.mjs").exists()
     assert 'const BUILD_ID = "beta4-editor-lifecycle"' in source
     assert 'data-applied-without-editor-render' in source
     assert 'preserveDraft = Boolean(this._draft)' in source

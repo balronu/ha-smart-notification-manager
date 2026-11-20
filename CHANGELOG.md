@@ -1,5 +1,32 @@
 # Changelog
 
+## v0.1.0-beta.5 – Eigenständige iOS-Diagnose
+
+### Deutsch
+
+- Ergänzt die HA-authentifizierte Diagnose-URL
+  `/api/smart_notification_manager/diagnostics`.
+- Prüft unabhängig vom normalen Panel-Bundle die veröffentlichte
+  `smart-notification-manager.js?v=4`, Custom-Element-Registrierung,
+  Initialisierung, Fehlerkanäle und den HA-WebSocket-Handshake.
+- Ermöglicht auf Safari und in der Home-Assistant-App das Kopieren eines
+  bereinigten Berichts ohne Cookies, Tokens, Eingabewerte oder externe
+  Telemetrie.
+- Diese Diagnose-Beta behebt den iOS-White-Screen noch nicht. Der Bericht
+  bleibt Voraussetzung für einen gezielten Fix; Issue #13 bleibt offen.
+
+### English
+
+- Adds the Home Assistant-authenticated standalone diagnostic URL
+  `/api/smart_notification_manager/diagnostics`.
+- Checks the published `smart-notification-manager.js?v=4`, custom-element
+  registration, initialization, error channels, and the HA WebSocket handshake
+  independently of the normal panel bundle.
+- Allows Safari and the Home Assistant app to copy a redacted report without
+  cookies, tokens, input values, or external telemetry.
+- This diagnostic beta does not claim to fix the iOS white screen. The report
+  remains the prerequisite for a targeted fix; Issue #13 remains open.
+
 ## v0.1.0-beta.4 – Panel-Lebenszyklus und Fokusverlust
 
 ### Deutsch
