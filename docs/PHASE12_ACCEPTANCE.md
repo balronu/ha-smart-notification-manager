@@ -1,6 +1,7 @@
 # Phase 12 – Abnahmebericht
 
-Stand: 2026-11-20. **Nicht bereit für Beta.**
+Stand: 2026-11-20. **Manuelle öffentliche Test-Beta freigegeben; keine
+vollständige Produktabnahme.**
 
 ## Verifizierte Release-Gates
 
@@ -35,11 +36,13 @@ vor dem Aufruf und persistiert fehlende Voraussetzungen als Fehler statt als
 erfolgreiche Zustellung. Config-Flow, Panel, Regeleditor, Statistik und
 Migration benötigen keine optionalen Provider.
 
-## Verbleibende fachliche Blocker
+## Verbleibende fachliche Einschränkungen
 
-Die Beta bleibt trotz optionaler Provider gesperrt, bis die verbindlichen
-Kernanforderungen, die authentifizierte isolierte HA-Browser-/Runtime-Abnahme
-und die übrigen Release-Gates nachgewiesen sind. Issue #13 bleibt offen.
+Die optionale Provider-Gruppe ist kein Beta-Blocker. Für die ausdrücklich
+freigegebene manuelle Test-Beta bleiben jedoch die authentifizierte isolierte
+HA-Browser-E2E, die manuelle Praxiserprobung und die vollständige fachliche
+Gesamtabnahme offen. Issue #13 bleibt deshalb offen. Diese Veröffentlichung
+ist kein GO für eine Stable-Version.
 
-Es wurden kein Tag, kein Release, keine HACS-Installation und keine
-produktive Home-Assistant-Änderung vorgenommen.
+Die Test-Beta wird als `v0.1.0-beta.1` veröffentlicht. Es erfolgt keine
+Installation auf VM 104 und keine produktive Home-Assistant-Änderung.
