@@ -5,6 +5,36 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+SUPPORTED_CHANNEL_TYPES = {
+    "notify": "Home-Assistant Notify",
+    "telegram": "Telegram über Home-Assistant-Dienst",
+    "whatsapp": "WhatsApp über Home-Assistant-Dienst",
+    "fritzbox": "FRITZ!Box über Home-Assistant-Dienst",
+    "sip_pbx": "SIP/PBX über Home-Assistant-Dienst",
+    "tts": "TTS über Home-Assistant-Dienst",
+    "email": "E-Mail über Home-Assistant-Dienst",
+    "doorbell": "Klingel über Home-Assistant-Dienst",
+    "voice_call": "Sprachanruf über Home-Assistant-Dienst",
+    "mobile": "Mobile App über Home-Assistant-Dienst",
+    "mail": "E-Mail-Alias über Home-Assistant-Dienst",
+}
+
+
+def channel_catalog() -> tuple[dict[str, str], ...]:
+    """Return supported channel contracts without claiming provider APIs."""
+
+    return tuple({"channel_type": key, "label": label, "mode": "home_assistant_service"} for key, label in SUPPORTED_CHANNEL_TYPES.items())
+
+
+def validate_channel_config(channel_type: str, config: dict[str, Any]) -> None:
+    """Require a concrete existing HA service for every channel adapter."""
+
+    if channel_type not in SUPPORTED_CHANNEL_TYPES:
+        raise ValueError("Unbekannter Kanaltyp; Provider müssen über einen unterstützten HA-Dienst angebunden werden.")
+    service = config.get("service")
+    if not isinstance(service, str) or service.count(".") != 1:
+        raise ValueError("Jeder Kanal benötigt einen vorhandenen Home-Assistant-Dienst domain.service.")
+
 
 class DeliveryAuthorizationError(PermissionError):
     """Raised when a real service call lacks explicit user confirmation."""
@@ -132,6 +162,7 @@ def adapter_from_channel(hass: Any, channel: dict[str, Any]) -> HAServiceAdapter
     """Build an adapter only from an existing, explicitly configured HA service."""
 
     config = channel.get("config", {})
+    validate_channel_config(str(channel.get("channel_type", "")), config)
     service_name = config.get("service")
     if not isinstance(service_name, str) or service_name.count(".") != 1:
         raise ValueError("Kanal benötigt einen Home-Assistant-Dienst domain.service")

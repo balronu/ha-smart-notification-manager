@@ -11,6 +11,8 @@ from smart_notification_manager.core.adapters import (
     DeliveryResult,
     HAServiceAdapter,
     adapter_from_channel,
+    channel_catalog,
+    validate_channel_config,
 )
 from smart_notification_manager.core.delivery_service import DeliveryService
 from smart_notification_manager.core.delivery_store import DeliveryStore, PolicySuppressedError
@@ -111,6 +113,15 @@ async def test_missing_home_assistant_service_is_reported_without_call():
     assert await adapter.async_validate({"enabled": True, "channel_id": "mail"}) == [
         "Der konfigurierte Home-Assistant-Dienst ist nicht verfügbar"
     ]
+
+
+def test_all_phase12_channels_have_explicit_home_assistant_service_contract():
+    channel_types = {item["channel_type"] for item in channel_catalog()}
+    assert {"notify", "telegram", "whatsapp", "fritzbox", "sip_pbx", "tts", "email", "doorbell", "voice_call"} <= channel_types
+    for channel_type in channel_types:
+        validate_channel_config(channel_type, {"service": "notify.test_target"})
+    with pytest.raises(ValueError, match="domain.service"):
+        validate_channel_config("telegram", {})
 
 
 @pytest.mark.asyncio

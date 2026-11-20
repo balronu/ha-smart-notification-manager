@@ -15,7 +15,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .const import DOMAIN
-from .core.adapters import DeliveryRequest
+from .core.adapters import DeliveryRequest, channel_catalog
 from .core.alarm_center import AlarmCenterStore
 from .core.alarm_lifecycle import AlarmLifecycleStore, AlarmPolicy, alarm_to_dict
 from .core.automation_migration import AutomationMigrationStore, build_hybrid_plan, discover_automation
@@ -29,6 +29,7 @@ from .core.revalidation import revalidate_alarm
 from .core.rule_store import EditorAccess, RuleStore, rule_from_editor_payload, rule_to_dict
 from .core.rule_templates import RuleTemplateStore
 from .core.simulation import async_policy_preview, simulate_rule
+from .core.statistics import validate_statistics_filters
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -86,7 +87,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, websocket_save)
     websocket_api.async_register_command(hass, websocket_delete)
     websocket_api.async_register_command(hass, websocket_duplicate)
-    for handler in (websocket_recipient_list, websocket_recipient_save, websocket_recipient_delete, websocket_group_save, websocket_channel_save, websocket_channel_group_save, websocket_channel_group_delete, websocket_template_save, websocket_template_delete, websocket_routing_preview, websocket_rule_routing_save, websocket_delivery_enqueue, websocket_delivery_list, websocket_alarm_list, websocket_alarm_trigger, websocket_alarm_process_due, websocket_alarm_events, websocket_alarm_acknowledge, websocket_alarm_acknowledge_many, websocket_alarm_resolve, websocket_alarm_close, websocket_alarm_center_list, websocket_alarm_center_detail, websocket_alarm_category_list, websocket_alarm_category_save, websocket_alarm_category_deactivate, websocket_alarm_filter_list, websocket_alarm_filter_save, websocket_alarm_filter_delete, websocket_alarm_role_save, websocket_policy_list, websocket_policy_quiet_save, websocket_policy_pause_save, websocket_policy_pause_resume, websocket_policy_rate_limit_save, websocket_policy_dependency_save, websocket_policy_observation_save, websocket_policy_evaluate, websocket_phase8_template_list, websocket_phase8_template_save, websocket_phase8_template_delete, websocket_phase8_template_export, websocket_phase8_template_import, websocket_phase8_simulate, websocket_phase10_observe, websocket_phase8_versions, websocket_phase8_restore, websocket_phase9_discover, websocket_phase9_preview, websocket_phase9_prepare, websocket_phase9_activate, websocket_phase9_rollback, websocket_phase9_reference, websocket_phase11_export, websocket_phase11_import, websocket_phase11_backup, websocket_phase11_restore, websocket_phase11_recovery):
+    for handler in (websocket_recipient_list, websocket_recipient_save, websocket_recipient_delete, websocket_group_save, websocket_channel_save, websocket_channel_group_save, websocket_channel_group_delete, websocket_template_save, websocket_template_delete, websocket_routing_preview, websocket_rule_routing_save, websocket_delivery_enqueue, websocket_delivery_list, websocket_statistics_get, websocket_alarm_list, websocket_alarm_trigger, websocket_alarm_process_due, websocket_alarm_events, websocket_alarm_acknowledge, websocket_alarm_acknowledge_many, websocket_alarm_resolve, websocket_alarm_close, websocket_alarm_center_list, websocket_alarm_center_detail, websocket_alarm_category_list, websocket_alarm_category_save, websocket_alarm_category_deactivate, websocket_alarm_filter_list, websocket_alarm_filter_save, websocket_alarm_filter_delete, websocket_alarm_role_save, websocket_policy_list, websocket_policy_quiet_save, websocket_policy_pause_save, websocket_policy_pause_resume, websocket_policy_rate_limit_save, websocket_policy_dependency_save, websocket_policy_observation_save, websocket_policy_evaluate, websocket_phase8_template_list, websocket_phase8_template_save, websocket_phase8_template_delete, websocket_phase8_template_export, websocket_phase8_template_import, websocket_phase8_simulate, websocket_phase10_observe, websocket_phase8_versions, websocket_phase8_restore, websocket_phase9_discover, websocket_phase9_preview, websocket_phase9_prepare, websocket_phase9_activate, websocket_phase9_rollback, websocket_phase9_reference, websocket_phase11_export, websocket_phase11_import, websocket_phase11_backup, websocket_phase11_restore, websocket_phase11_recovery):
         websocket_api.async_register_command(hass, handler)
     hass.data[DOMAIN]["websocket_registered"] = True
 
@@ -196,7 +197,7 @@ async def websocket_recipient_list(hass: HomeAssistant, connection, msg: dict[st
         store = _recipient_store(hass)
         recipients = [asdict(item) for item in await store.async_list_recipients()]
         groups = [asdict(item) for item in await store.async_list_groups()]
-        connection.send_result(msg["id"], {"recipients": recipients, "groups": groups, "channels": await store.async_list_channels(), "channel_groups": await store.async_list_channel_groups(), "templates": await store.async_list_templates()})
+        connection.send_result(msg["id"], {"recipients": recipients, "groups": groups, "channels": await store.async_list_channels(), "channel_catalog": channel_catalog(), "channel_groups": await store.async_list_channel_groups(), "templates": await store.async_list_templates()})
     except (RuntimeError, sqlite3.Error) as err:
         _send_storage_error(connection, msg, err)
 
@@ -386,6 +387,26 @@ async def websocket_delivery_list(hass: HomeAssistant, connection, msg: dict[str
                 visible_ids = {item["alarm_id"] for item in visible["alarms"]}
                 jobs = [job for job in jobs if job.alarm_id in visible_ids]
         connection.send_result(msg["id"], {"jobs": [_job_to_dict(job) for job in jobs]})
+    except (RuntimeError, sqlite3.Error) as err:
+        _send_storage_error(connection, msg, err)
+
+
+@_require_alarm_role("read")
+@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/statistics/get"})
+@websocket_api.async_response
+async def websocket_statistics_get(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """Return persisted alarm, lifecycle and delivery statistics."""
+
+    try:
+        filters = validate_statistics_filters(msg)
+        store = hass.data.get(DOMAIN, {}).get("statistics_store")
+        if store is None:
+            from .core.statistics import StatisticsStore
+
+            store = StatisticsStore(_recipient_store(hass).repository)
+        connection.send_result(msg["id"], await store.async_summary(**filters))
+    except (TypeError, ValueError):
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Der Statistikfilter ist ungültig.")
     except (RuntimeError, sqlite3.Error) as err:
         _send_storage_error(connection, msg, err)
 

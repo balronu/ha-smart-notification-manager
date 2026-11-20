@@ -7,7 +7,7 @@ from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import Any
 
-from .adapters import ChannelCapabilities
+from .adapters import ChannelCapabilities, validate_channel_config
 from .delivery import build_routing_preview
 from .recipients import Recipient, RecipientDevice, RecipientGroup, resolve_recipients
 from .repository import SQLiteRepository
@@ -78,6 +78,7 @@ class RecipientStore:
         if not required <= channel.keys():
             raise ValueError("Kanal benötigt ID, Typ und Anzeigename")
         config = channel.get("config", {})
+        validate_channel_config(str(channel["channel_type"]), config)
 
         def operation(connection):
             connection.execute("INSERT INTO channels(channel_id, channel_type, display_name, enabled, config_json) VALUES (?, ?, ?, ?, ?) ON CONFLICT(channel_id) DO UPDATE SET channel_type=excluded.channel_type, display_name=excluded.display_name, enabled=excluded.enabled, config_json=excluded.config_json", (channel["channel_id"], channel["channel_type"], channel["display_name"], int(channel.get("enabled", True)), json.dumps(config, ensure_ascii=False, sort_keys=True)))

@@ -11,7 +11,7 @@ async def test_recipient_group_channel_and_preview_round_trip(tmp_path: Path):
     store = RecipientStore(SQLiteRepository(tmp_path / "manager.sqlite3"))
     await store.async_save_recipient(Recipient("michael", "Michael", devices=(RecipientDevice("phone", "Telefon", "mobile", primary=True),)))
     await store.async_save_group(RecipientGroup("family", "Familie", ("michael",)))
-    await store.async_save_channel({"channel_id": "mobile", "channel_type": "mobile", "display_name": "Mobile App"})
+    await store.async_save_channel({"channel_id": "mobile", "channel_type": "mobile", "display_name": "Mobile App", "config": {"service": "notify.mobile_app_phone"}})
     await store.async_save_channel_group({"channel_group_id": "urgent", "display_name": "Dringend", "channel_ids": ["mobile"]})
     assert (await store.async_list_groups())[0].recipient_ids == ("michael",)
     assert (await store.async_list_channels())[0]["channel_type"] == "mobile"
