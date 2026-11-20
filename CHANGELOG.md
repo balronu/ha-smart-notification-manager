@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.1.0-beta.3 – Stabile Dropdown-Auswahl
+
+### Deutsch
+
+- Regeleditor-Dropdowns für Bereich, Priorität, Auslöser und Bedingungen bleiben bei Hintergrundaktualisierungen geöffnet und auswählbar.
+- Unsaved Drafts werden nicht durch neue Paneldaten überschrieben.
+- Bereichs- und Prioritätsauswahl werden sofort in den Draft synchronisiert.
+- Echter Chromium-Regressionslauf für Desktop, iPad und iPhone mit Screenshots/Traces ergänzt.
+
+### English
+
+- Rule-editor dropdowns for area, priority, triggers, and conditions remain usable during background panel updates.
+- Unsaved drafts are preserved when fresh panel data arrives.
+- Area and priority selections are synchronized into the draft immediately.
+- Added a real Chromium regression run for desktop, iPad, and iPhone viewports with screenshots/traces.
+
 ## v0.1.0-beta.2 – Fehlerkorrektur für HA 2026.11.2
 
 ### Deutsch

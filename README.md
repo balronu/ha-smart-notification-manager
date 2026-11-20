@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Beta-Teststand `v0.1.0-beta.2`:** Dieser manuell installierbare öffentliche Teststand enthält Fehlerkorrekturen für die HA-2026.11.2-Registry und das Statistik-WebSocket-Schema. Er ist keine vollständige Produktabnahme; die authentifizierte HA-Browser-E2E und manuelle Praxisergebnisse stehen noch aus.
+> **Beta-Teststand `v0.1.0-beta.3`:** Dieser manuell installierbare öffentliche Teststand behebt das sofortige Schließen von Dropdown-Feldern bei Hintergrundaktualisierungen. Er ist keine vollständige Produktabnahme; die authentifizierte HA-Browser-E2E und manuelle Praxisergebnisse stehen noch aus.
 
 ## Ziel
 
@@ -114,7 +114,7 @@ bestehende Alarm- und RuleStore-Datenkette.
 1. In HACS **Benutzerdefinierte Repositories** öffnen.
 2. `balronu/ha-smart-notification-manager` als Repository vom Typ
    **Integration** hinzufügen.
-3. Die Vorabversion `v0.1.0-beta.2` auswählen und installieren.
+3. Die Vorabversion `v0.1.0-beta.3` auswählen und installieren.
 4. Home Assistant nach den üblichen eigenen Installationsschritten neu laden
    und die Integration über **Einstellungen → Geräte & Dienste** einrichten.
 
@@ -136,8 +136,8 @@ Michael Dick.
 ## English summary
 
 Smart Notification Manager is a German-first Home Assistant custom integration.
-`v0.1.0-beta.2` is a manually installable public test release. It fixes the
-HA 2026.11.2 area-registry lookup and the statistics WebSocket filter schema.
+`v0.1.0-beta.3` is a manually installable public test release. It fixes
+dropdown selection loss during background panel updates.
 Telegram,
 WhatsApp and telephony are optional; missing services do not block core setup.
 Authenticated HA browser E2E and manual practical results remain open, so this

@@ -57,6 +57,11 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert "data-filter=\"priority\"" in source
     assert "data-filter=\"state\"" in source
     assert "Monatswerte" in source
+    assert "_interactionActive" in source
+    assert "_pendingData" in source
+    assert 'addEventListener("pointerdown"' in source
+    assert 'addEventListener("pointerup"' in source
+    assert 'target.matches("[data-field]")' in source
     assert "_panelLoadPromise" in source
     assert "_statisticsFailureSignature" in source
     assert "this.load(true)" in source
@@ -72,6 +77,7 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert (FRONTEND.parent / "phase-5-policy-fixture.html").exists()
     assert (FRONTEND.parent / "phase-9-automation-migration-fixture.html").exists()
     assert (FRONTEND.parent / "phase-12-statistics-fixture.html").exists()
+    assert (FRONTEND.parent.parent / "tests" / "e2e" / "editor-select.mjs").exists()
     phase9 = FRONTEND.parent / "phase-9-automation-migration.js"
     assert phase9.exists()
     source9 = phase9.read_text(encoding="utf-8")
