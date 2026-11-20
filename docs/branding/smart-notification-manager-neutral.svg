@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Smart Notification Manager">
+  <rect width="512" height="512" rx="96" fill="#1b6ca8"/>
+  <path fill="#fff" d="M256 104c-70 0-126 56-126 126v64l-34 54c-8 13 1 30 16 30h288c15 0 24-17 16-30l-34-54v-64c0-70-56-126-126-126Zm0 328c29 0 53-19 61-45H195c8 26 32 45 61 45Z"/>
+  <circle cx="373" cy="135" r="48" fill="#f6c343"/>
+  <path fill="#1b6ca8" d="m350 135 15 15 31-35 12 11-43 48-27-27 12-12Z"/>
+</svg>
