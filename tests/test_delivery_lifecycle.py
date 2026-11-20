@@ -163,13 +163,20 @@ def test_all_phase12_channels_have_explicit_home_assistant_service_contract():
     assert {"notify", "telegram", "whatsapp", "fritzbox", "sip_pbx", "tts", "email", "doorbell", "voice_call"} <= channel_types
     for item in catalog:
         channel_type = item["channel_type"]
-        validate_channel_config(channel_type, {"service": "notify.test_target"})
+        service = {
+            "telegram": "telegram_bot.send_message",
+            "email": "smtp.send_message",
+            "tts": "tts.speak",
+        }.get(channel_type, "notify.test_target")
+        validate_channel_config(channel_type, {"service": service})
         assert isinstance(item["target_fields"], list)
     assert "telegram_bot.send_message" in next(item["service_examples"] for item in catalog if item["channel_type"] == "telegram")
     assert "smtp.send_message" in next(item["service_examples"] for item in catalog if item["channel_type"] == "email")
     assert "tts.speak" in next(item["service_examples"] for item in catalog if item["channel_type"] == "tts")
     with pytest.raises(ValueError, match="domain.service"):
         validate_channel_config("telegram", {})
+    with pytest.raises(ValueError, match="tts benötigt"):
+        validate_channel_config("tts", {"service": "notify.test_target"})
 
 
 @pytest.mark.asyncio
