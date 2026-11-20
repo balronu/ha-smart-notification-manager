@@ -13,6 +13,21 @@ def automation():
     return {"id": "phase11", "alias": "Tür", "trigger": {"platform": "state", "entity_id": "binary_sensor.tuer", "to": "on"}, "action": [{"service": "notify.mobile_app_phone", "data": {"message": "Tür offen"}}]}
 
 
+def nested_automation():
+    return {
+        "id": "nested-phase12",
+        "alias": "Keller",
+        "trigger": [{"platform": "state", "entity_id": "binary_sensor.keller", "to": "on"}],
+        "condition": [{"condition": "state", "entity_id": "input_boolean.away", "state": "on"}],
+        "action": [
+            {"variables": {"sec" + "ret": "fixture-value"}},
+            {"choose": [{"conditions": [], "sequence": [{"service": "notify.mobile_app_phone", "data": {"message": "Keller offen"}}]}]},
+            {"repeat": {"count": 2, "sequence": [{"service": "notify.mobile_app_tablet", "data": {"message": "Wiederholung"}}]}},
+            {"service": "light.turn_on", "target": {"entity_id": "light.keller"}},
+        ],
+    }
+
+
 @pytest.mark.asyncio
 async def test_phase11_export_import_roundtrip_creates_new_unapproved_plan(tmp_path):
     store = AutomationMigrationStore(SQLiteRepository(tmp_path / "manager.sqlite3"))
@@ -58,6 +73,46 @@ async def test_phase11_recovery_snapshot_survives_new_store_and_has_no_delivery_
     assert recovery["external_references"][0]["execution_ref"] == "run-1"
     assert await second.repository.async_run(lambda c: c.execute("SELECT COUNT(*) FROM alarm_instances").fetchone()[0]) == 0
     assert recovery["ha_write_performed"] is False
+
+
+@pytest.mark.asyncio
+async def test_phase12_nested_hybrid_replaces_only_selected_actions_and_preserves_control_flow(tmp_path):
+    store = AutomationMigrationStore(SQLiteRepository(tmp_path / "manager.sqlite3"))
+    plan = await store.async_prepare(nested_automation(), user_id="admin", now=NOW)
+    assert plan["classification"] == "hybrid_migrierbar"
+    hybrid = plan["draft"]
+    assert hybrid["classification"] == "hybrid_migrierbar"
+    assert hybrid["transformed"]["action"][1]["choose"][0]["sequence"][0]["service"] == "smart_notification_manager.send"
+    assert hybrid["transformed"]["action"][2]["repeat"]["sequence"][0]["service"] == "smart_notification_manager.send"
+    assert hybrid["transformed"]["action"][3]["service"] == "light.turn_on"
+    assert hybrid["no_automatic_activation"] is True
+
+
+@pytest.mark.asyncio
+async def test_phase12_external_reference_is_idempotent_and_has_monotonic_lifecycle(tmp_path):
+    store = AutomationMigrationStore(SQLiteRepository(tmp_path / "manager.sqlite3"))
+    first = await store.async_reference_event(automation_id="nested-phase12", execution_ref="run-1", entity_id="binary_sensor.keller", rule_id=None, event="open", now=NOW)
+    duplicate = await store.async_reference_event(automation_id="nested-phase12", execution_ref="run-1", entity_id="binary_sensor.keller", rule_id=None, event="open", now=NOW)
+    assert duplicate["reference_id"] == first["reference_id"]
+    assert duplicate["alarm_id"] == first["alarm_id"]
+    acknowledged = await store.async_reference_event(automation_id="nested-phase12", execution_ref="run-1", entity_id="binary_sensor.keller", rule_id=None, event="acknowledge", now=NOW)
+    assert acknowledged["alarm_status"] == "acknowledged"
+    resolved = await store.async_reference_event(automation_id="nested-phase12", execution_ref="run-1", entity_id="binary_sensor.keller", rule_id=None, event="resolve", now=NOW)
+    assert resolved["alarm_status"] == "resolved"
+    with pytest.raises(ValueError, match="nicht erneut geöffnet"):
+        await store.async_reference_event(automation_id="nested-phase12", execution_ref="run-1", entity_id="binary_sensor.keller", rule_id=None, event="open", now=NOW)
+    with pytest.raises(ValueError, match="anderen Entität"):
+        await store.async_reference_event(automation_id="nested-phase12", execution_ref="run-1", entity_id="binary_sensor.other", rule_id=None, event="update", now=NOW)
+
+
+@pytest.mark.asyncio
+async def test_phase12_migration_export_redacts_nested_secrets(tmp_path):
+    store = AutomationMigrationStore(SQLiteRepository(tmp_path / "manager.sqlite3"))
+    plan = await store.async_prepare(nested_automation(), user_id="admin", now=NOW)
+    exported = await store.async_export_plan(plan["plan_id"], user_id="admin")
+    serialized = str(exported)
+    assert "fixture-value" not in serialized
+    assert "[ausgeblendet]" in serialized
 
 
 def test_phase11_frontend_is_german_read_only_and_mirrored():
