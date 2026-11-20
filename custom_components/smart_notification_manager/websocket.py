@@ -394,7 +394,12 @@ async def websocket_delivery_list(hass: HomeAssistant, connection, msg: dict[str
 
 
 @_require_alarm_role("read")
-@websocket_api.websocket_command({probatio.Required("type"): "smart_notification_manager/statistics/get"})
+@websocket_api.websocket_command(
+    {
+        probatio.Required("type"): "smart_notification_manager/statistics/get",
+        probatio.Optional("filters", default={}): dict,
+    }
+)
 @websocket_api.async_response
 async def websocket_statistics_get(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     """Return persisted alarm, lifecycle and delivery statistics."""

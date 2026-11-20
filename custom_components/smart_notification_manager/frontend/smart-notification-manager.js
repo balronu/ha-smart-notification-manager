@@ -211,7 +211,32 @@
   const phase12Connected = SmartNotificationManagerPanel.prototype.connectedCallback;
   SmartNotificationManagerPanel.prototype.connectedCallback = function () { if (!this._phase12stats) { this._phase12stats = document.createElement("smart-notification-phase12-statistics"); this.shadowRoot.append(this._phase12stats); } return phase12Connected.call(this); };
   const phase12Load = SmartNotificationManagerPanel.prototype.load;
-  SmartNotificationManagerPanel.prototype.load = async function () { await phase12Load.call(this); if (!this._hass?.callWS || !this._phase12stats) return; try { this._phase12stats.data = { ...(await this._hass.callWS({ type: "smart_notification_manager/statistics/get", filters: this._phase12stats.state.filters || {} })), filters: this._phase12stats.state.filters || {}, onAction: () => this.load() }; } catch (error) { this._phase12stats.data = { totals: {}, daily: {}, error: "Die Statistiken konnten nicht geladen werden." }; } };
+  SmartNotificationManagerPanel.prototype.load = async function (forceStatistics = false) {
+    if (this._panelLoadPromise) return this._panelLoadPromise;
+    this._panelLoadPromise = (async () => {
+      await phase12Load.call(this);
+      if (!this._hass?.callWS || !this._phase12stats) return;
+      const filters = this._phase12stats.state.filters || {};
+      const failureSignature = JSON.stringify(filters);
+      if (!forceStatistics && this._statisticsFailureSignature === failureSignature) return;
+      try {
+        this._phase12stats.data = {
+          ...(await this._hass.callWS({ type: "smart_notification_manager/statistics/get", filters })),
+          filters,
+          onAction: () => this.load(true),
+        };
+        this._statisticsFailureSignature = null;
+      } catch (error) {
+        this._statisticsFailureSignature = failureSignature;
+        this._phase12stats.data = {
+          totals: {}, daily: {}, filters,
+          error: "Die Statistiken konnten nicht geladen werden. Aktualisieren Sie die Ansicht für einen neuen Versuch.",
+          onAction: () => this.load(true),
+        };
+      }
+    })();
+    try { return await this._panelLoadPromise; } finally { this._panelLoadPromise = null; }
+  };
   if (!customElements.get("smart-notification-rule-editor")) customElements.define("smart-notification-rule-editor", SmartNotificationRuleEditor);
   if (!customElements.get("smart-notification-manager-panel")) customElements.define("smart-notification-manager-panel", SmartNotificationManagerPanel);
   if (!customElements.get("smart-notification-recipient-manager")) customElements.define("smart-notification-recipient-manager", SmartNotificationRecipientManager);

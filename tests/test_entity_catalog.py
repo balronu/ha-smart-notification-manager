@@ -21,7 +21,7 @@ def test_entity_catalog_uses_entity_device_area_and_state_registries(monkeypatch
     monkeypatch.setattr(
         entity_catalog.area_registry,
         "async_get",
-        lambda hass: SimpleNamespace(async_get=lambda area_id: SimpleNamespace(name="Wohnzimmer")),
+        lambda hass: SimpleNamespace(async_get_area=lambda area_id: SimpleNamespace(name="Wohnzimmer")),
     )
     hass = SimpleNamespace(states=SimpleNamespace(get=lambda entity_id: SimpleNamespace(state="21.4")))
 

@@ -9,6 +9,7 @@ import pytest
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import CONF_LANGUAGE
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import area_registry, entity_registry
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.setup import async_setup_component
 from pytest_homeassistant.common import MockConfigEntry
@@ -75,6 +76,89 @@ async def test_official_harness_config_flow_creates_entry(
     )
     assert result["type"] == "create_entry"
     assert result["title"] == "Smart Notification Manager"
+
+
+@pytest.mark.asyncio
+async def test_official_harness_empty_panel_lists_are_loadable(
+    hass: HomeAssistant,
+    tmp_path: Path,
+    hass_access_token: str,
+    hass_ws_client,
+    enable_custom_integrations,
+) -> None:
+    """The empty post-setup state used by the new-rule flow is loadable."""
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={},
+        options={CONF_LANGUAGE: "de", CONF_DB_PATH: str(tmp_path / "empty-panel.sqlite3")},
+        title="Smart Notification Manager",
+    )
+    entry.add_to_hass(hass)
+    area = area_registry.async_get(hass).async_create("Wohnzimmer")
+    registry = entity_registry.async_get(hass)
+    registry.async_get_or_create(
+        "sensor",
+        "official_harness",
+        "temperature",
+        suggested_object_id="wohnzimmer_temperature",
+    )
+    registry.async_update_entity("sensor.wohnzimmer_temperature", area_id=area.id)
+    hass.states.async_set("sensor.wohnzimmer_temperature", "21.5", {"unit_of_measurement": "°C"})
+    assert await async_setup_component(hass, "http", {})
+    assert await async_setup_component(hass, "frontend", {})
+    assert await async_setup_component(hass, "websocket_api", {})
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    client = await hass_ws_client(hass, access_token=hass_access_token)
+    await client.send_json({"id": 1, "type": "smart_notification_manager/list"})
+    rules = await client.receive_json()
+    assert rules["id"] == 1
+    assert rules["type"] == "result"
+    assert rules["success"] is True
+    assert rules["result"]["rules"] == []
+    assert any(
+        entity["entity_id"] == "sensor.wohnzimmer_temperature"
+        and entity["area_id"] == area.id
+        and entity["area_name"] == "Wohnzimmer"
+        and entity["state"] == "21.5"
+        for entity in rules["result"]["entities"]
+    )
+
+    await client.send_json({"id": 2, "type": "smart_notification_manager/recipient/list"})
+    recipients = await client.receive_json()
+    assert recipients["id"] == 2
+    assert recipients["type"] == "result"
+    assert recipients["success"] is True
+    assert recipients["result"]["recipients"] == []
+    assert recipients["result"]["groups"] == []
+    assert recipients["result"]["channels"] == []
+
+    startup_commands = [
+        {"id": 3, "type": "smart_notification_manager/delivery/list"},
+        {"id": 4, "type": "smart_notification_manager/alarm/list"},
+        {"id": 5, "type": "smart_notification_manager/policy/list"},
+        {
+            "id": 6,
+            "type": "smart_notification_manager/alarm_center/list",
+            "filters": {},
+            "page": 1,
+            "page_size": 25,
+            "sort": "newest",
+            "group_by": None,
+        },
+        {"id": 7, "type": "smart_notification_manager/statistics/get", "filters": {}},
+    ]
+    for command in startup_commands:
+        await client.send_json(command)
+        response = await client.receive_json()
+        assert response["id"] == command["id"]
+        assert response["type"] == "result"
+        assert response["success"] is True
+
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
 
 
 @pytest.mark.asyncio
