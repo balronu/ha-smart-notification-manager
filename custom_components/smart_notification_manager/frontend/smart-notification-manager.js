@@ -92,7 +92,12 @@
 
   class SmartNotificationManagerPanel extends HTMLElement {
     constructor() { super(); this.attachShadow({ mode: "open" }); this._editor = document.createElement("smart-notification-rule-editor"); this._recipients = document.createElement("smart-notification-recipient-manager"); this.shadowRoot.append(this._editor, this._recipients); }
-    set hass(value) { this._hass = value; this.load(); }
+    set hass(value) {
+      const initialConnection = !this._hass;
+      const connectionChanged = initialConnection || this._hass.connection !== value?.connection;
+      this._hass = value;
+      if (connectionChanged) this.load();
+    }
     connectedCallback() { this.load(); }
     async load() { if (!this._hass?.callWS) return; try { const data = await this._hass.callWS({ type: "smart_notification_manager/list" }); this._editor.data = { rules: data.rules, entities: data.entities, onSave: (rule) => this.save(rule), onDelete: (id) => this.remove(id), onDuplicate: (rule) => this.duplicate(rule) }; const delivery = await this._hass.callWS({ type: "smart_notification_manager/recipient/list" }); this._recipients.data = { ...delivery, onSave: (recipient) => this.saveRecipient(recipient), onGroupSave: (group) => this.saveGroup(group) }; } catch (error) { this._editor.data = { rules: [], entities: [] }; this._editor._error = "Regeln und Empfänger konnten nicht geladen werden."; this._editor.render(); } }
     async save(rule) { try { await this._hass.callWS({ type: "smart_notification_manager/save", rule }); await this.load(); } catch (error) { this._editor._error = "Die Regel konnte nicht gespeichert werden. Prüfe die Eingaben oder die Berechtigung."; this._editor.render(); } }

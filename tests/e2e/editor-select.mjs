@@ -23,6 +23,19 @@ try {
     await page.goto(fixtureUrl, { waitUntil: "domcontentloaded" });
     const editor = page.locator("smart-notification-rule-editor");
     await editor.locator('[data-action="new"]').first().click();
+    const nameField = editor.locator('[data-field="name"]');
+    await nameField.focus();
+    await page.keyboard.type("Fokus bleibt erhalten");
+    await editor.evaluate((element) => {
+      element.__mutationCount = 0;
+      element.__observer = new MutationObserver(() => { element.__mutationCount += 1; });
+      element.__observer.observe(element.shadowRoot, { childList: true, subtree: true });
+      element.data = { rules: element._rules, entities: element._entities };
+    });
+    await page.waitForTimeout(10);
+    if (await nameField.inputValue() !== "Fokus bleibt erhalten") throw new Error(`${name}: Texteingabe nach Hintergrundaktualisierung verloren`);
+    if (await editor.evaluate((element) => element.__mutationCount) !== 0) throw new Error(`${name}: aktiver Formular-DOM wurde ersetzt`);
+    await editor.evaluate((element) => element.__observer.disconnect());
     const area = editor.locator('[data-field="area_id"]');
     const priority = editor.locator('[data-field="priority"]');
     await area.selectOption("wohnzimmer");

@@ -59,6 +59,8 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert "Monatswerte" in source
     assert "_interactionActive" in source
     assert "_pendingData" in source
+    assert "const connectionChanged" in source
+    assert "if (connectionChanged) this.load();" in source
     assert 'addEventListener("pointerdown"' in source
     assert 'addEventListener("pointerup"' in source
     assert 'target.matches("[data-field]")' in source
