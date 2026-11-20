@@ -30,10 +30,48 @@ SERVICE_DOMAIN_CONTRACTS = {
 }
 
 
-def channel_catalog() -> tuple[dict[str, str], ...]:
-    """Return supported channel contracts without claiming provider APIs."""
+def channel_catalog(hass: Any | None = None) -> tuple[dict[str, Any], ...]:
+    """Return channel contracts and optional-provider availability for the UI."""
 
-    return tuple({"channel_type": key, "label": value["label"], "mode": "home_assistant_service", "service_examples": value["service_examples"], "target_fields": value["target_fields"]} for key, value in SUPPORTED_CHANNEL_TYPES.items())
+    result = []
+    for key, value in SUPPORTED_CHANNEL_TYPES.items():
+        status = {"state": "not_configured", "label": "Nicht eingerichtet"}
+        if hass is not None:
+            examples = value["service_examples"]
+            if examples:
+                for example in examples:
+                    if "<" in example:
+                        domain = example.split(".", 1)[0]
+                        services = getattr(hass.services, "async_services", dict)()
+                        if services.get(domain):
+                            status = {"state": "available", "label": "Verfügbar"}
+                            break
+                    else:
+                        domain, service = example.split(".", 1)
+                        if hass.services.has_service(domain, service):
+                            status = {"state": "available", "label": "Verfügbar"}
+                            break
+            if status["state"] != "available" and examples:
+                status = {"state": "unavailable", "label": "Nicht verfügbar"}
+        result.append({"channel_type": key, "label": value["label"], "mode": "home_assistant_service", "service_examples": value["service_examples"], "target_fields": value["target_fields"], "availability": status})
+    return tuple(result)
+
+
+def channel_availability(hass: Any, channel: dict[str, Any]) -> dict[str, str]:
+    """Describe whether one persisted channel can currently be called."""
+
+    config = channel.get("config") or {}
+    service = config.get("service")
+    if not isinstance(service, str) or service.count(".") != 1:
+        return {"state": "not_configured", "label": "Nicht eingerichtet"}
+    domain, service_name = service.split(".", 1)
+    if not hass.services.has_service(domain, service_name):
+        return {"state": "unavailable", "label": "Nicht verfügbar"}
+    try:
+        validate_channel_config(str(channel.get("channel_type", "")), config)
+    except ValueError:
+        return {"state": "unavailable", "label": "Nicht verfügbar"}
+    return {"state": "available", "label": "Verfügbar"}
 
 
 def validate_channel_config(channel_type: str, config: dict[str, Any]) -> None:

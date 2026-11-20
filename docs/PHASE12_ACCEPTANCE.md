@@ -20,15 +20,26 @@ Die HACS-Prüfung wurde zunächst wegen fehlender Topics und Brand-Assets
 abgelehnt. Beide Befunde wurden behoben und im anschließenden öffentlichen
 PR-Lauf erfolgreich erneut geprüft. Gate #18 ist damit geschlossen.
 
-## Fachliche Blocker
+## Verbindliche Klarstellung zu optionalen Providern
 
-Die verbindliche Anforderungsliste in [REQUIREMENTS.md](REQUIREMENTS.md)
-markiert weiterhin mehrere Anforderungen als offen (`O`). Dazu gehören unter
-anderem konkrete Provider-Verträge für Notify/Telegram/WhatsApp/E-Mail/TTS,
-FRITZ!Box- und SIP/PBX-Telefonie, vollständige Alarmstatistiken sowie die
-vollständige Import-/Backup-/Hybrid-Migration. Diese Punkte sind weder durch
-HACS noch durch die vorhandenen 144 Unit-/Harness-Tests abgenommen.
+Telegram, WhatsApp sowie sämtliche Telefoniekanäle (FRITZ!Box, SIP/PBX,
+Klingel- und Sprachanrufe) sind nach der Projektentscheidung optionale
+Erweiterungen. Ihre Installation, externe Verfügbarkeit oder Zielinstanz-
+Abnahme ist keine Voraussetzung für die erste Beta. Der Kernbetrieb muss ohne
+diese Integrationen funktionieren.
 
-Eine Beta wäre daher trotz grüner Infrastruktur-Gates nicht freigabefähig.
+Die UI kennzeichnet fehlende optionale Dienste als `Nicht eingerichtet` oder
+`Nicht verfügbar`. Ein gespeicherter Kanal wird nur bei einem vorhandenen
+HA-Service als verfügbar angezeigt; die Delivery-Schicht validiert den Dienst
+vor dem Aufruf und persistiert fehlende Voraussetzungen als Fehler statt als
+erfolgreiche Zustellung. Config-Flow, Panel, Regeleditor, Statistik und
+Migration benötigen keine optionalen Provider.
+
+## Verbleibende fachliche Blocker
+
+Die Beta bleibt trotz optionaler Provider gesperrt, bis die verbindlichen
+Kernanforderungen, die authentifizierte isolierte HA-Browser-/Runtime-Abnahme
+und die übrigen Release-Gates nachgewiesen sind. Issue #13 bleibt offen.
+
 Es wurden kein Tag, kein Release, keine HACS-Installation und keine
 produktive Home-Assistant-Änderung vorgenommen.

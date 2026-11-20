@@ -25,6 +25,9 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert "fritz.dial" in source
     assert "FRITZ!Box device_id" in source
     assert "target_field" in source
+    assert "Nicht eingerichtet" in source
+    assert "Nicht verfügbar" in source
+    assert "availability?.label" in source
     assert "item.config?.device_id || \"\"" in source
     assert "item.config?.max_ring_seconds ?? 15" in source
     assert "smart_notification_manager/template/save" in source

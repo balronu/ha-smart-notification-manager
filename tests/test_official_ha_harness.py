@@ -29,7 +29,7 @@ def hass_config_dir(hass_tmp_config_dir: str) -> str:
 async def test_official_harness_loads_config_entry_and_unloads_cleanly(
     hass: HomeAssistant, tmp_path: Path, enable_custom_integrations
 ) -> None:
-    """Load the real custom integration through the official hass fixture."""
+    """Load the integration without optional Telegram/WhatsApp/phone services."""
 
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -48,6 +48,8 @@ async def test_official_harness_loads_config_entry_and_unloads_cleanly(
     assert hass.data[DOMAIN]["rule_store"] is not None
     assert hass.data[DOMAIN]["automation_migration_store"] is not None
     assert hass.data[DOMAIN]["frontend_registered"] is True
+    assert not hass.services.has_service("telegram_bot", "send_message")
+    assert not hass.services.has_service("fritz", "dial")
 
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
