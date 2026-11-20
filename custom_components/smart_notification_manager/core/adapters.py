@@ -19,6 +19,15 @@ SUPPORTED_CHANNEL_TYPES = {
     "mail": {"label": "E-Mail-Alias über Home-Assistant-Dienst", "service_examples": ["notify.<mail_entity>"], "target_fields": ["entity_id", "target"]},
 }
 
+SERVICE_DOMAIN_CONTRACTS = {
+    "notify": frozenset({"notify"}),
+    "mobile": frozenset({"notify"}),
+    "telegram": frozenset({"telegram_bot", "notify"}),
+    "email": frozenset({"smtp", "notify"}),
+    "mail": frozenset({"notify"}),
+    "tts": frozenset({"tts"}),
+}
+
 
 def channel_catalog() -> tuple[dict[str, str], ...]:
     """Return supported channel contracts without claiming provider APIs."""
@@ -34,6 +43,11 @@ def validate_channel_config(channel_type: str, config: dict[str, Any]) -> None:
     service = config.get("service")
     if not isinstance(service, str) or service.count(".") != 1:
         raise ValueError("Jeder Kanal benötigt einen vorhandenen Home-Assistant-Dienst domain.service.")
+    domain, _service = service.split(".", 1)
+    allowed_domains = SERVICE_DOMAIN_CONTRACTS.get(channel_type)
+    if allowed_domains is not None and domain not in allowed_domains:
+        allowed = ", ".join(sorted(allowed_domains))
+        raise ValueError(f"{channel_type} benötigt einen Dienst aus den Domänen: {allowed}.")
 
 
 class DeliveryAuthorizationError(PermissionError):
