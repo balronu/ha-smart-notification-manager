@@ -1,6 +1,7 @@
 import asyncio
 import copy
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 from smart_notification_manager.core.automation_migration import (
@@ -12,6 +13,7 @@ from smart_notification_manager.core.automation_migration import (
 from smart_notification_manager.core.repository import SQLiteRepository
 
 NOW = datetime(2026, 1, 1, tzinfo=UTC)
+ROOT = Path(__file__).parents[1]
 
 
 def simple(service="notify.mobile_app_phone"):
@@ -229,6 +231,15 @@ async def test_parallel_reference_open_calls_have_one_mapping(tmp_path):
 def test_preview_has_no_automatic_activation_marker():
     result = build_hybrid_plan(simple())
     assert result["no_automatic_activation"] is True
+
+
+def test_phase9_frontend_exposes_prepare_activate_and_rollback_without_ha_write():
+    source = (ROOT / "frontend/phase-9-automation-migration.js").read_text()
+    assert source == (ROOT / "custom_components/smart_notification_manager/frontend/phase-9-automation-migration.js").read_text()
+    assert 'phase9/prepare' in source
+    assert 'phase9/activate' in source
+    assert 'phase9/rollback' in source
+    assert "ha_write_performed" in source
 
 
 def test_original_automation_hash_changes_on_concurrent_edit():
