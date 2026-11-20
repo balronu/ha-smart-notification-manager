@@ -11,6 +11,7 @@ from smart_notification_manager.core.adapters import (
     DeliveryResult,
     HAServiceAdapter,
     adapter_from_channel,
+    channel_availability,
     channel_catalog,
     validate_channel_config,
 )
@@ -205,6 +206,20 @@ def test_all_phase12_channels_have_explicit_home_assistant_service_contract():
         validate_channel_config("telegram", {})
     with pytest.raises(ValueError, match="tts benötigt"):
         validate_channel_config("tts", {"service": "notify.test_target"})
+
+
+def test_optional_provider_catalog_and_persisted_channel_status_are_honest():
+    catalog = channel_catalog()
+    whatsapp = next(item for item in catalog if item["channel_type"] == "whatsapp")
+    assert whatsapp["availability"] == {"state": "not_configured", "label": "Nicht eingerichtet"}
+    assert channel_availability(FakeHass(), {"channel_type": "notify", "config": {"service": "notify.mobile_app_phone"}}) == {
+        "state": "available",
+        "label": "Verfügbar",
+    }
+    assert channel_availability(FakeHass(), {"channel_type": "whatsapp", "config": {"service": "notify.missing"}}) == {
+        "state": "unavailable",
+        "label": "Nicht verfügbar",
+    }
 
 
 @pytest.mark.asyncio

@@ -15,7 +15,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .const import DOMAIN
-from .core.adapters import DeliveryRequest, channel_catalog
+from .core.adapters import DeliveryRequest, channel_availability, channel_catalog
 from .core.alarm_center import AlarmCenterStore
 from .core.alarm_lifecycle import AlarmLifecycleStore, AlarmPolicy, alarm_to_dict
 from .core.automation_migration import AutomationMigrationStore, build_hybrid_plan, discover_automation
@@ -197,7 +197,9 @@ async def websocket_recipient_list(hass: HomeAssistant, connection, msg: dict[st
         store = _recipient_store(hass)
         recipients = [asdict(item) for item in await store.async_list_recipients()]
         groups = [asdict(item) for item in await store.async_list_groups()]
-        connection.send_result(msg["id"], {"recipients": recipients, "groups": groups, "channels": await store.async_list_channels(), "channel_catalog": channel_catalog(), "channel_groups": await store.async_list_channel_groups(), "templates": await store.async_list_templates()})
+        channels = await store.async_list_channels()
+        channels = [{**channel, "availability": channel_availability(hass, channel)} for channel in channels]
+        connection.send_result(msg["id"], {"recipients": recipients, "groups": groups, "channels": channels, "channel_catalog": channel_catalog(hass), "channel_groups": await store.async_list_channel_groups(), "templates": await store.async_list_templates()})
     except (RuntimeError, sqlite3.Error) as err:
         _send_storage_error(connection, msg, err)
 
