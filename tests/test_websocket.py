@@ -219,7 +219,7 @@ async def test_phase5_policy_websocket_round_trip_has_no_delivery_side_effect(tm
     policy_store = __import__("smart_notification_manager.core.policies", fromlist=["PolicyStore"]).PolicyStore(repository)
     hass = SimpleNamespace(data={DOMAIN: {"policy_store": policy_store}})
     connection = Connection()
-    await implementation(websocket_policy_quiet_save)(hass, connection, {"id": 30, "quiet": {"quiet_id": "night", "name": "Nacht", "start_time": "22:00", "end_time": "07:00", "weekdays": [0, 1, 2, 3, 4]}})
+    await implementation(websocket_policy_quiet_save)(hass, connection, {"id": 30, "quiet": {"quiet_id": "night", "name": "Nacht", "start_time": "22:00", "end_time": "07:00", "weekdays": []}})
     assert connection.errors == []
     await implementation(websocket_policy_evaluate)(hass, connection, {"id": 31, "request": {"rule_id": "rule", "alarm_state": "active", "rule_enabled": True, "priority": "normal"}})
     assert connection.results[-1][1]["decision"]["action"] == "allow"
