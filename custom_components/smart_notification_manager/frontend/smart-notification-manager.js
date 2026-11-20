@@ -39,8 +39,15 @@
     }
     preview(draft) { const ids = (draft.triggers || []).flatMap((trigger) => trigger.entity_ids || []); const names = ids.map((id) => this._entities.find((entity) => entity.entity_id === id)?.friendly_name || id).join(", ") || "eine ausgewählte Entität"; const what = draft.triggers?.[0]?.kind === "numeric" ? "den numerischen Grenzwert" : (draft.triggers?.[0]?.to_state || "den Zielzustand"); return `Wenn ${names} ${what} erreichen, werden ${draft.conditions?.children?.length || "die"} Bedingung(en) geprüft.`; }
     bind() {
-      this.shadowRoot.oninput = (event) => { if (event.target.matches('[data-field="search"]')) { this._query = event.target.value; this.refreshList(); } else if (event.target.matches('[data-field="entity-search"]')) { this._entityQuery = event.target.value; this.refreshPickers(); } else if (event.target.matches("[data-field], [data-trigger-field], [data-condition-field], [data-trigger-entity], [data-condition-day]")) this._dirty = true; };
-      this.shadowRoot.onchange = (event) => this.change(event); this.shadowRoot.onclick = (event) => this.click(event);
+      if (this._clickHandler) this.shadowRoot.removeEventListener("click", this._clickHandler);
+      if (this._inputHandler) this.shadowRoot.removeEventListener("input", this._inputHandler);
+      if (this._changeHandler) this.shadowRoot.removeEventListener("change", this._changeHandler);
+      this._clickHandler = (event) => this.click(event);
+      this._inputHandler = (event) => { if (event.target.matches('[data-field="search"]')) { this._query = event.target.value; this.refreshList(); } else if (event.target.matches('[data-field="entity-search"]')) { this._entityQuery = event.target.value; this.refreshPickers(); } else if (event.target.matches("[data-field], [data-trigger-field], [data-condition-field], [data-trigger-entity], [data-condition-day]")) this._dirty = true; };
+      this._changeHandler = (event) => this.change(event);
+      this.shadowRoot.addEventListener("click", this._clickHandler);
+      this.shadowRoot.addEventListener("input", this._inputHandler);
+      this.shadowRoot.addEventListener("change", this._changeHandler);
     }
     change(event) {
       const target = event.target;
@@ -53,7 +60,7 @@
       if (target.dataset.rule) return this.open(target.dataset.rule); if (action === "new") return this.open(); if (action === "close") { this._draft = null; this._error = ""; this._dirty = false; return this.render(); } if (action === "save") return this.save(); if (action === "delete") return this._onDelete?.(this._draft.rule_id); if (action === "duplicate") return this._onDuplicate?.(this._draft);
       if (action === "add-trigger") { this.syncForm(); this._draft.triggers.push({ kind: "state", entity_ids: [], to_state: "on", from_state: null, minimum_duration_seconds: 0, delay_seconds: 0, unknown_policy: "ignore", unavailable_policy: "ignore" }); this._dirty = true; return this.render(); }
       if (action === "remove-trigger") { this.syncForm(); this._draft.triggers.splice(Number(target.dataset.triggerIndex), 1); this._dirty = true; return this.render(); }
-      if (action === "add-condition") { this.conditionAt(target.dataset.conditionPath).children.push({ kind: "entity_state", value: { entity_id: this._entities[0]?.entity_id || "", state: "on" }, children: [] }); this._dirty = true; return this.render(); }
+      if (action === "add-condition") { this.syncForm(); this.conditionAt(target.dataset.conditionPath).children.push({ kind: "entity_state", value: { entity_id: this._entities[0]?.entity_id || "", state: "on" }, children: [] }); this._dirty = true; return this.render(); }
       if (action === "remove-condition") { this.removeCondition(target.dataset.conditionPath); this._dirty = true; return this.render(); }
     }
     syncForm() { const root = this.shadowRoot; for (const field of ["name", "category", "description", "area_id", "priority"]) this._draft[field] = root.querySelector(`[data-field="${field}"]`)?.value || ""; this._draft.enabled = root.querySelector('[data-field="enabled"]')?.checked !== false; root.querySelectorAll(".trigger-card[data-trigger-index]").forEach((card) => { const trigger = this._draft.triggers[Number(card.dataset.triggerIndex)]; card.querySelectorAll("[data-trigger-field]").forEach((field) => { const key = field.dataset.triggerField; trigger[key] = ["minimum_duration_seconds", "delay_seconds", "threshold", "upper_threshold", "hysteresis"].includes(key) ? (field.value === "" ? null : Number(field.value)) : field.value; }); trigger.entity_ids = [...card.querySelectorAll("[data-trigger-entity]:checked")].map((input) => input.dataset.triggerEntity); }); }

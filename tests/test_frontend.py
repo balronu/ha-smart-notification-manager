@@ -8,6 +8,10 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert "smart-notification-rule-editor" in source
     assert "Neue Regel" in source
     assert "data-action=\"add-condition\"" in source
+    assert 'addEventListener("click", this._clickHandler)' in source
+    assert 'addEventListener("input", this._inputHandler)' in source
+    assert 'addEventListener("change", this._changeHandler)' in source
+    assert 'if (action === "add-condition") { this.syncForm();' in source
     assert "@media(max-width:520px)" in source
     assert "textarea" in source
     assert 'data-field="json"' not in source
