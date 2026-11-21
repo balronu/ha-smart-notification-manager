@@ -9,6 +9,7 @@
     "e2e:panel-lifecycle": "node tests/e2e/panel-lifecycle.mjs",
     "e2e:mobile-navigation": "node tests/e2e/mobile-navigation.mjs",
     "e2e:rule-validation": "node tests/e2e/rule-validation.mjs",
+    "e2e:delete-regression": "node tests/e2e/delete-regression.mjs",
     "e2e:diagnostics": "node tests/e2e/diagnostics.mjs"
   },
   "devDependencies": {

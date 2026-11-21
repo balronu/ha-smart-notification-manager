@@ -148,15 +148,18 @@ async def websocket_delete(hass: HomeAssistant, connection, msg: dict[str, Any])
     from datetime import UTC, datetime
 
     try:
-        await _store(hass).async_delete(
+        deleted = await _store(hass).async_delete(
             msg["rule_id"],
             now=datetime.now(UTC),
             access=EditorAccess(connection.user.id, frozenset({"admin"})),
         )
+    except ValueError:
+        connection.send_error(msg["id"], websocket_api.ERR_INVALID_FORMAT, "Die Regel existiert nicht mehr oder wurde bereits gelöscht.")
+        return
     except (RuntimeError, sqlite3.Error) as err:
         _send_storage_error(connection, msg, err)
         return
-    connection.send_result(msg["id"], {})
+    connection.send_result(msg["id"], {"deleted": deleted, "rule_id": msg["rule_id"]})
     _notify_rule_update(hass, msg["rule_id"])
 
 
