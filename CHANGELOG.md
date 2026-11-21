@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.1.0-beta.10 – Speichervorgang und Cache-Artefakt
+
+### Deutsch
+
+- Cache-Key auf `?v=8` erhöht, damit Beta.9-Frontend-Code nicht aus dem Browsercache weiterläuft.
+- Auswahlzähler aktualisiert sich unmittelbar mit Checkbox, Filterwechsel und Entitätsdaten-Updates.
+- Isolierter Browser-Regressionspfad prüft Auswahl, Draft, Speichern ohne Bedingungen und erneutes Laden.
+- Keine Änderungen an VM104, produktiven Regeln oder echten Benachrichtigungen.
+
+### English
+
+- Cache key raised to `?v=8` so the current frontend cannot be shadowed by a cached Beta.9 artifact.
+- Selection count stays synchronized across checkbox changes, filter changes, and entity-data updates.
+- Isolated browser regression covers selection, draft, saving without conditions, and reload.
+- No changes to VM104, productive rules, or real notifications.
+
 ## v0.1.0-beta.9 – Regelvalidierung und mobile Bedienung
 
 ### Deutsch

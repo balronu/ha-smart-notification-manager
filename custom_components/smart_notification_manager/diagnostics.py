@@ -6,8 +6,8 @@ from aiohttp import web
 from homeassistant.helpers.http import HomeAssistantView
 
 DIAGNOSTIC_URL = "/api/smart_notification_manager/diagnostics"
-PANEL_RESOURCE = "/smart_notification_manager_static/smart-notification-manager.js?v=7"
-BUILD_ID = "beta9-rule-validation"
+PANEL_RESOURCE = "/smart_notification_manager_static/smart-notification-manager.js?v=8"
+BUILD_ID = "beta10-save-path-cache-fix"
 
 DIAGNOSTIC_HTML = r"""<!doctype html>
 <html lang="de">
@@ -44,8 +44,8 @@ DIAGNOSTIC_HTML = r"""<!doctype html>
 <script>
 (() => {
   "use strict";
-  const BUILD_ID = "beta9-rule-validation";
-  const RESOURCE = "/smart_notification_manager_static/smart-notification-manager.js?v=7";
+  const BUILD_ID = "beta10-save-path-cache-fix";
+  const RESOURCE = "/smart_notification_manager_static/smart-notification-manager.js?v=8";
   const checks = new Map();
   const errors = [];
   let report = null;
@@ -71,7 +71,7 @@ DIAGNOSTIC_HTML = r"""<!doctype html>
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const text = await response.text();
     if (!text.includes(`const BUILD_ID = "${BUILD_ID}"`)) throw new Error("Build-ID im geladenen Artefakt fehlt");
-    setCheck("Panel-Ressource", "ok", `${response.status} · ${new URL(response.url).pathname}?v=7 · Build ${BUILD_ID}`);
+    setCheck("Panel-Ressource", "ok", `${response.status} · ${new URL(response.url).pathname}?v=8 · Build ${BUILD_ID}`);
   }
 
   async function checkPanel() {

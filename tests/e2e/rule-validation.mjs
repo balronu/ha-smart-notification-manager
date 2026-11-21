@@ -20,12 +20,24 @@ for (const [browserName, browserType, cases] of [["Chromium", chromium, [["deskt
     await editor.locator('[data-field="area_id"]').selectOption("eingang");
     await editor.locator('[data-field="priority"]').selectOption("warning");
     await editor.locator('[data-trigger-field="to_state"]').fill("on");
-    await editor.locator('[data-trigger-field="minimum_duration_seconds"]').fill("120");
-    await editor.locator('[data-trigger-entity="binary_sensor.haustur_door_sensor"]').check();
-    const preview = await editor.locator(".preview p").textContent();
+      await editor.locator('[data-trigger-field="minimum_duration_seconds"]').fill("120");
+      await editor.locator('[data-trigger-entity="binary_sensor.haustur_door_sensor"]').check();
+      if (await editor.locator('.selection-summary').textContent() !== "1 Entität(en) ausgewählt.") throw new Error(`${name}: Auswahlzähler blieb trotz aktivierter Checkbox auf null`);
+      await page.evaluate(() => {
+        const editor = document.querySelector("smart-notification-rule-editor");
+        editor.data = { entities: editor._entities, rules: editor._rules, onSave: editor._onSave };
+      });
+      if (!(await editor.locator('[data-trigger-entity="binary_sensor.haustur_door_sensor"]').isChecked())) throw new Error(`${name}: Auswahl ging bei hass-Update verloren`);
+      await editor.locator('[data-field="entity-area-filter"]').selectOption("wohnzimmer");
+      if (!(await editor.locator('[data-trigger-entity="binary_sensor.haustur_door_sensor"]').isChecked())) throw new Error(`${name}: Auswahl ging beim Filterwechsel verloren`);
+      if (!(await editor.locator('.selection-summary').textContent()).includes("1 Entität")) throw new Error(`${name}: Auswahlzähler blieb nach Filterwechsel inkonsistent`);
+      const preview = await editor.locator(".preview p").textContent();
     if (!preview.includes("Door sensor im Bereich Eingang") || !preview.includes("mindestens 120 Sekunden") || preview.includes("Empfänger") || preview.includes("Zustellung")) throw new Error(`${name}: Vorschau ist nicht semantisch korrekt`);
     await editor.locator('[data-action="save"]').click();
-    if (await page.locator("body").getAttribute("data-saved") !== "passed" || await page.locator("body").getAttribute("data-conditions") !== "0") throw new Error(`${name}: Regel ohne Bedingungen wurde nicht gespeichert`);
+      if (await page.locator("body").getAttribute("data-saved") !== "passed" || await page.locator("body").getAttribute("data-conditions") !== "0") throw new Error(`${name}: Regel ohne Bedingungen wurde nicht gespeichert`);
+      await editor.locator('[data-rule]').click();
+      if (!(await editor.locator('[data-trigger-entity="binary_sensor.haustur_door_sensor"]').isChecked())) throw new Error(`${name}: gespeicherte Auswahl wurde beim erneuten Laden nicht wiederhergestellt`);
+      if (await editor.locator('[data-field="name"]').inputValue() !== "Haustür noch offen") throw new Error(`${name}: gespeicherte Regel wurde nicht wieder geladen`);
     results.push({ browser: browserName, viewport: name, saved_without_conditions: true, preview });
     await page.close();
     }
