@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.1.0-beta.9 – Regelvalidierung und mobile Bedienung
+
+### Deutsch
+
+- Regeln mit mindestens einem gültigen Auslöser können ohne zusätzliche Bedingungen gespeichert werden; leere Bedingungsgruppen sind optional.
+- Mindestdauer bedeutet jetzt: Zielzustand beginnt, bleibt für die konfigurierte Zeit aktiv und löst danach einmal aus; ein Wechsel vorher bricht ab, `unknown`/`unavailable` folgen der Konfiguration.
+- Die Vorschau beschreibt Entität, Bereich, Zustand, Mindestdauer sowie verschachtelte UND-/ODER-Bedingungen und behauptet keine Empfänger oder Zustellung.
+- Lange Entity-IDs und Friendly Names umbrechen auf mobilen Karten; Checkboxen und Status bleiben innerhalb der Karte bedienbar.
+- Bestehende Bereichsfilter, Fremdbereich-Auswahl, Navigation, Draft-Schutz, Diagnose und gespeicherte Regeln bleiben erhalten.
+
+### English
+
+- Rules with at least one valid trigger can be saved without additional conditions; empty condition groups are optional.
+- Minimum duration now means the target state starts, remains active for the configured time, and fires once; leaving it early aborts, while `unknown`/`unavailable` follow the configured policy.
+- The preview explains entity, area, state, minimum duration, and nested AND/OR conditions without claiming recipients or delivery.
+- Long entity IDs and friendly names wrap on mobile cards; checkboxes and status values remain inside the card.
+- Existing area filters, outside-area selections, navigation, draft protection, diagnostics, and saved rules remain intact.
+
 ## v0.1.0-beta.8 – Mobile Panel-Navigation und Draft-Schutz
 
 ### Deutsch

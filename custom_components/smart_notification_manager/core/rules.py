@@ -162,8 +162,6 @@ def validate_condition(node: ConditionNode) -> None:
     """Validate a condition tree independently from the frontend."""
 
     if node.kind in {"all", "any"}:
-        if not node.children:
-            raise ValueError("condition groups must contain a condition")
         for child in node.children:
             validate_condition(child)
         return

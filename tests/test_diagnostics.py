@@ -41,7 +41,7 @@ def test_diagnostics_view_uses_home_assistant_auth_and_no_external_telemetry():
     assert "document.cookie" not in DIAGNOSTIC_HTML
     assert "navigator.clipboard?.writeText" in DIAGNOSTIC_HTML
     assert 'v=7' in PANEL_RESOURCE
-    assert 'beta8-mobile-panel-navigation' in DIAGNOSTIC_HTML
+    assert 'beta9-rule-validation' in DIAGNOSTIC_HTML
 
 
 @pytest.mark.asyncio

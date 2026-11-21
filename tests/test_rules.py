@@ -41,3 +41,7 @@ def test_rule_validation_rejects_missing_trigger():
 
 def test_rule_validation_accepts_state_rule():
     validate_rule(valid_rule())
+
+
+def test_rule_validation_accepts_trigger_without_conditions():
+    validate_rule(replace(valid_rule(), conditions=ConditionNode("all", children=())))

@@ -7,7 +7,7 @@ from homeassistant.helpers.http import HomeAssistantView
 
 DIAGNOSTIC_URL = "/api/smart_notification_manager/diagnostics"
 PANEL_RESOURCE = "/smart_notification_manager_static/smart-notification-manager.js?v=7"
-BUILD_ID = "beta8-mobile-panel-navigation"
+BUILD_ID = "beta9-rule-validation"
 
 DIAGNOSTIC_HTML = r"""<!doctype html>
 <html lang="de">
@@ -44,7 +44,7 @@ DIAGNOSTIC_HTML = r"""<!doctype html>
 <script>
 (() => {
   "use strict";
-  const BUILD_ID = "beta8-mobile-panel-navigation";
+  const BUILD_ID = "beta9-rule-validation";
   const RESOURCE = "/smart_notification_manager_static/smart-notification-manager.js?v=7";
   const checks = new Map();
   const errors = [];

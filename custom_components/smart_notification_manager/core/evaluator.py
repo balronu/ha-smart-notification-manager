@@ -23,7 +23,7 @@ def evaluate_condition(node: ConditionNode, context: EvaluationContext) -> bool:
     """Evaluate a condition tree with no frontend or HA dependency."""
 
     if node.kind == "all":
-        return bool(node.children) and all(evaluate_condition(child, context) for child in node.children)
+        return all(evaluate_condition(child, context) for child in node.children)
     if node.kind == "any":
         return bool(node.children) and any(evaluate_condition(child, context) for child in node.children)
     if node.kind == "entity_state":
@@ -83,8 +83,11 @@ def evaluate_state_trigger(
     minimum_duration_seconds: float = 0,
     unknown_policy: str = "ignore",
     unavailable_policy: str = "ignore",
+    state_started_at: datetime | None = None,
+    now: datetime | None = None,
+    already_triggered: bool = False,
 ) -> bool:
-    """Evaluate a state transition, treating unknown values explicitly."""
+    """Evaluate a transition or a stable target state after its hold time."""
 
     if before == "unknown" and unknown_policy != "match":
         return False
@@ -94,8 +97,12 @@ def evaluate_state_trigger(
         return False
     if after == "unavailable" and unavailable_policy != "match":
         return False
-    if before == after:
+    if before == after and state_started_at is None:
         return False
+    if already_triggered:
+        return False
+    if state_started_at is not None and now is not None:
+        elapsed_seconds = max(0.0, (now - state_started_at).total_seconds())
     if elapsed_seconds < minimum_duration_seconds:
         return False
     if from_state is not None and before != from_state:
