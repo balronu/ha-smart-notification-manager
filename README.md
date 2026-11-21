@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Beta `v0.1.0-beta.11`:** Der Speichervorgang wartet nachweisbar auf Backend-Antwort und Listenaktualisierung; Save-Trace, Draft-Erhalt und sichtbare Fehlerzustände sind enthalten. Die echte authentifizierte iPhone-/Companion-Abnahme bleibt offen.
+> **Beta `v0.1.0-beta.12`:** Der Löschvorgang verlangt eine Bestätigung, löscht anhand der eindeutigen Regel-ID, wartet auf Backend- und Listenbestätigung und bewahrt den Entwurf bei Fehlern. Delete-Trace, Doppelname-/Timeout-Regressionen und die echte authentifizierte iPhone-/Companion-Abnahme bleiben getrennte Nachweise.
 
 ## Ziel
 
@@ -115,7 +115,7 @@ bestehende Alarm- und RuleStore-Datenkette.
 1. In HACS **Benutzerdefinierte Repositories** öffnen.
 2. `balronu/ha-smart-notification-manager` als Repository vom Typ
    **Integration** hinzufügen.
-3. Die Vorabversion `v0.1.0-beta.11` auswählen und installieren.
+3. Die Vorabversion `v0.1.0-beta.12` auswählen und installieren.
 4. Home Assistant nach den üblichen eigenen Installationsschritten neu laden
    und die Integration über **Einstellungen → Geräte & Dienste** einrichten.
 
@@ -137,10 +137,10 @@ Michael Dick.
 ## English summary
 
 Smart Notification Manager is a German-first Home Assistant custom integration.
-`v0.1.0-beta.11` is a manually installable public beta. Rules can be saved
-without optional conditions; minimum-duration semantics, mobile entity
-selection, and the German preview are validated consistently. Authenticated
-iPhone/Companion acceptance remains open.
+`v0.1.0-beta.12` is a manually installable public beta. Rule deletion requires
+explicit confirmation, uses the unique rule ID, waits for backend/list
+confirmation, and preserves the draft on failure. Authenticated iPhone/Companion
+acceptance remains open.
 Telegram,
 WhatsApp and telephony are optional; missing services do not block core setup.
 Authenticated HA browser E2E and manual practical results remain open, so this

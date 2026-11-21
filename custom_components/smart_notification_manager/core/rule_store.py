@@ -120,17 +120,21 @@ class RuleStore:
 
         return await self.repository.async_run(operation)
 
-    async def async_delete(self, rule_id: str, *, now: datetime, access: EditorAccess) -> None:
+    async def async_delete(self, rule_id: str, *, now: datetime, access: EditorAccess) -> bool:
         _require(access, Permission.EDIT)
         ensure_aware(now)
 
         def operation(connection):
-            connection.execute(
+            cursor = connection.execute(
                 "UPDATE rules SET enabled = 0, deleted_at = ?, updated_at = ? WHERE rule_id = ? AND deleted_at IS NULL",
                 (now.isoformat(), now.isoformat(), rule_id),
             )
+            return cursor.rowcount == 1
 
-        await self.repository.async_run(operation)
+        deleted = await self.repository.async_run(operation)
+        if not deleted:
+            raise ValueError("rule not found or already deleted")
+        return True
 
     async def async_duplicate(self, rule: RuleDefinition, *, now: datetime, access: EditorAccess) -> RuleDefinition:
         _require(access, Permission.EDIT)

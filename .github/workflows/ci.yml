@@ -26,6 +26,7 @@ jobs:
         run: |
           npm ci --ignore-scripts
           npx --yes playwright@1.65.1 install --with-deps webkit
+          npm run e2e:delete-regression
           npm run e2e:phase12
           npm run e2e:editor
           npm run e2e:panel-lifecycle

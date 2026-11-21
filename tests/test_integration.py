@@ -80,7 +80,7 @@ def test_panel_stays_in_home_assistant_shell_and_uses_safe_area():
     source = (Path(__file__).parents[1] / "custom_components" / DOMAIN / "__init__.py").read_text(encoding="utf-8")
     assert "embed_iframe=False" in source
     assert "handle_safe_area=True" in source
-    assert "smart-notification-manager.js?v=9" in source
+    assert "smart-notification-manager.js?v=10" in source
 
 
 def test_config_schema_is_a_domain_bound_schema():

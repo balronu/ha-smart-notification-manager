@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="de">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Löschregression</title></head>
+  <body>
+    <smart-notification-manager-panel></smart-notification-manager-panel>
+    <script src="smart-notification-manager.js"></script>
+    <script>
+      const panel = document.querySelector("smart-notification-manager-panel");
+      const entities = [{ entity_id: "binary_sensor.haustuer", friendly_name: "Haustür", area_id: "eingang", area_name: "Eingang", state: "off" }];
+      const base = (rule_id) => ({ rule_id, name: "Haustür offen", description: "", category: "Sicherheit", area_id: "eingang", area_name: "Eingang", priority: "warning", enabled: true, version: 1, created_at: "2026-01-01T00:00:00+00:00", updated_at: "2026-01-01T00:00:00+00:00", triggers: [{ kind: "state", entity_ids: ["binary_sensor.haustuer"], to_state: "on", from_state: "off", minimum_duration_seconds: 0, delay_seconds: 0, unknown_policy: "ignore", unavailable_policy: "ignore" }], conditions: { kind: "all", children: [] }, routing: {} });
+      let rules = [base("11111111-1111-4111-8111-111111111111"), base("22222222-2222-4222-8222-222222222222")];
+      window.__resetRules = () => { rules = [base("11111111-1111-4111-8111-111111111111")]; };
+      window.__confirmAnswer = false; window.__confirmCalls = 0; window.__deleteCalls = []; window.__wsTypes = []; window.__deleteMode = "success"; window.__deleteDelay = 0;
+      window.confirm = () => { window.__confirmCalls += 1; return window.__confirmAnswer; };
+      const callWS = async (message) => {
+        window.__wsTypes.push(message.type);
+        if (message.type === "smart_notification_manager/list") return { rules: structuredClone(rules), entities };
+        if (message.type === "smart_notification_manager/recipient/list") return { recipients: [], groups: [], channels: [] };
+        if (message.type === "smart_notification_manager/delete") {
+          window.__deleteCalls.push(message.rule_id);
+          if (window.__deleteDelay) await new Promise((resolve) => setTimeout(resolve, window.__deleteDelay));
+          if (window.__deleteMode === "timeout") throw new Error("WebSocket-Timeout");
+          rules = rules.filter((rule) => rule.rule_id !== message.rule_id);
+          return { deleted: true, rule_id: message.rule_id };
+        }
+        throw new Error(`Unexpected WebSocket command: ${message.type}`);
+      };
+      panel.hass = { callWS };
+    </script>
+  </body>
+</html>

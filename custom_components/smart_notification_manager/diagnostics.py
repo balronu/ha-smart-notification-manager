@@ -6,8 +6,8 @@ from aiohttp import web
 from homeassistant.helpers.http import HomeAssistantView
 
 DIAGNOSTIC_URL = "/api/smart_notification_manager/diagnostics"
-PANEL_RESOURCE = "/smart_notification_manager_static/smart-notification-manager.js?v=9"
-BUILD_ID = "beta11-save-confirmation-diagnostics"
+PANEL_RESOURCE = "/smart_notification_manager_static/smart-notification-manager.js?v=10"
+BUILD_ID = "beta12-delete-confirmation-diagnostics"
 
 DIAGNOSTIC_HTML = r"""<!doctype html>
 <html lang="de">
@@ -44,12 +44,13 @@ DIAGNOSTIC_HTML = r"""<!doctype html>
 <script>
 (() => {
   "use strict";
-  const BUILD_ID = "beta11-save-confirmation-diagnostics";
-  const RESOURCE = "/smart_notification_manager_static/smart-notification-manager.js?v=9";
+  const BUILD_ID = "beta12-delete-confirmation-diagnostics";
+  const RESOURCE = "/smart_notification_manager_static/smart-notification-manager.js?v=10";
   const checks = new Map();
   const errors = [];
   let report = null;
   let saveTrace = null;
+  let deleteTrace = null;
   const checksNode = document.querySelector("#checks");
   const summaryNode = document.querySelector("#summary");
   const environmentNode = document.querySelector("#environment");
@@ -58,7 +59,7 @@ DIAGNOSTIC_HTML = r"""<!doctype html>
 
   const safeError = (value) => String(value?.message || value || "Unbekannter Fehler").slice(0, 240);
   window.addEventListener("error", (event) => errors.push({ type: "error", message: safeError(event.error || event.message) }));
-  window.addEventListener("unhandledrejection", (event) => { errors.push({ type: "unhandledrejection", message: safeError(event.reason) }); });
+  window.addEventListener("unhandledrejection", (event) => { errors.push({ type: "unhandledrejection", message: safeError(event.reason?.stack || event.reason) }); });
 
   const render = () => {
     checksNode.innerHTML = [...checks].map(([name, value]) => `<li><span class="status ${value.status}">${value.status === "ok" ? "OK" : value.status === "error" ? "Fehler" : "Nicht prüfbar"}</span><span><strong>${name}</strong><br>${value.detail}</span></li>`).join("");
@@ -72,7 +73,7 @@ DIAGNOSTIC_HTML = r"""<!doctype html>
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const text = await response.text();
     if (!text.includes(`const BUILD_ID = "${BUILD_ID}"`)) throw new Error("Build-ID im geladenen Artefakt fehlt");
-    setCheck("Panel-Ressource", "ok", `${response.status} · ${new URL(response.url).pathname}?v=9 · Build ${BUILD_ID}`);
+    setCheck("Panel-Ressource", "ok", `${response.status} · ${new URL(response.url).pathname}?v=10 · Build ${BUILD_ID}`);
   }
 
   async function checkPanel() {
@@ -94,6 +95,8 @@ DIAGNOSTIC_HTML = r"""<!doctype html>
     if (build !== BUILD_ID) throw new Error(`Unerwartete Build-ID: ${build}`);
     setCheck("Panel-Initialisierung", "ok", `Custom Element, connectedCallback und Initial-Render · ${build}`);
     setCheck("Save-Trace", "unknown", "Kein Speichervorgang in der Diagnose ausgeführt; Schritte bleiben nicht bestätigt.");
+    deleteTrace = panel.shadowRoot?.querySelector("smart-notification-rule-editor")?.getDeleteTrace?.() || null;
+    setCheck("Delete-Trace", "unknown", "Kein Löschvorgang in der Diagnose ausgeführt; Schritte bleiben nicht bestätigt.");
   }
 
   async function checkWebSocket() {
@@ -120,7 +123,7 @@ DIAGNOSTIC_HTML = r"""<!doctype html>
     await task("HA-WebSocket", checkWebSocket);
     if (errors.length) setCheck("JavaScript-Fehlerkanal", "error", errors.map((item) => `${item.type}: ${item.message}`).join(" · "));
     else setCheck("JavaScript-Fehlerkanal", "ok", "Keine unhandled errors oder Promise-Rejections während der Diagnose.");
-    report = { build: BUILD_ID, resource: RESOURCE, save_trace: saveTrace, checks: Object.fromEntries(checks), errors: errors.map((item) => ({ type: item.type, message: item.message })), environment: { userAgent: navigator.userAgent, platform: navigator.platform || "unbekannt", language: navigator.language } };
+    report = { build: BUILD_ID, resource: RESOURCE, save_trace: saveTrace, delete_trace: deleteTrace, checks: Object.fromEntries(checks), errors: errors.map((item) => ({ type: item.type, message: item.message })), environment: { userAgent: navigator.userAgent, platform: navigator.platform || "unbekannt", language: navigator.language } };
     summaryNode.textContent = [...checks.values()].some((item) => item.status === "error") ? "Diagnose abgeschlossen: mindestens eine Prüfung ist fehlgeschlagen." : "Diagnose abgeschlossen.";
     copyButton.disabled = false; runButton.disabled = false;
   }

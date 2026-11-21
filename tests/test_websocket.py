@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
@@ -24,6 +25,7 @@ from smart_notification_manager.websocket import (
     websocket_alarm_trigger,
     websocket_channel_group_save,
     websocket_channel_save,
+    websocket_delete,
     websocket_delivery_enqueue,
     websocket_phase9_discover,
     websocket_phase9_prepare,
@@ -161,6 +163,41 @@ async def test_authenticated_api_persists_rule_without_conditions(tmp_path):
     assert saved is not None
     assert saved.conditions.kind == "all"
     assert saved.conditions.children == ()
+
+
+@pytest.mark.asyncio
+async def test_delete_uses_exact_id_and_persists_soft_delete_for_duplicate_names(tmp_path):
+    store = RuleStore(SQLiteRepository(tmp_path / "manager.sqlite3"))
+    hass = SimpleNamespace(data={DOMAIN: {"rule_store": store}})
+    connection = Connection()
+    first = replace(base_rule(), rule_id="11111111-1111-4111-8111-111111111111", name="Haustür offen")
+    second = replace(base_rule(), rule_id="22222222-2222-4222-8222-222222222222", name="Haustür offen")
+    await store.async_save(first, EditorAccess("ha-admin", frozenset({"admin"})))
+    await store.async_save(second, EditorAccess("ha-admin", frozenset({"admin"})))
+
+    await implementation(websocket_delete)(hass, connection, {"id": 20, "rule_id": first.rule_id})
+
+    assert connection.errors == []
+    assert connection.results[-1] == (20, {"deleted": True, "rule_id": first.rule_id})
+    assert await store.async_get(first.rule_id) is None
+    assert (await store.async_get(second.rule_id)).name == "Haustür offen"
+    assert [rule.rule_id for rule in await store.async_list()] == [second.rule_id]
+    deleted_at = await store.repository.async_run(
+        lambda connection: connection.execute("SELECT deleted_at FROM rules WHERE rule_id = ?", (first.rule_id,)).fetchone()[0]
+    )
+    assert deleted_at is not None
+
+
+@pytest.mark.asyncio
+async def test_delete_reports_missing_or_already_deleted_rule(tmp_path):
+    store = RuleStore(SQLiteRepository(tmp_path / "manager.sqlite3"))
+    hass = SimpleNamespace(data={DOMAIN: {"rule_store": store}})
+    connection = Connection()
+
+    await implementation(websocket_delete)(hass, connection, {"id": 21, "rule_id": "missing"})
+
+    assert connection.results == []
+    assert connection.errors == [(21, "invalid_format", "Die Regel existiert nicht mehr oder wurde bereits gelöscht.")]
 
 @pytest.mark.asyncio
 async def test_api_returns_safe_error_when_integration_is_missing():

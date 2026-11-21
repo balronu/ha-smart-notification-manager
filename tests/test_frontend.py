@@ -80,13 +80,15 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert (FRONTEND.parent / "phase-9-automation-migration-fixture.html").exists()
     assert (FRONTEND.parent / "phase-12-statistics-fixture.html").exists()
     assert (FRONTEND.parent / "rule-validation-fixture.html").exists()
+    assert (FRONTEND.parent / "delete-regression-fixture.html").exists()
     assert (FRONTEND.parent.parent / "tests" / "e2e" / "rule-validation.mjs").exists()
     assert (FRONTEND.parent.parent / "tests" / "e2e" / "editor-select.mjs").exists()
     assert (FRONTEND.parent.parent / "tests" / "e2e" / "panel-lifecycle.mjs").exists()
     assert (FRONTEND.parent / "panel-lifecycle-fixture.html").exists()
     assert (FRONTEND.parent.parent / "tests" / "test_diagnostics.py").exists()
     assert (FRONTEND.parent.parent / "tests" / "e2e" / "diagnostics.mjs").exists()
-    assert 'const BUILD_ID = "beta11-save-confirmation-diagnostics"' in source
+    assert (FRONTEND.parent.parent / "tests" / "e2e" / "delete-regression.mjs").exists()
+    assert 'const BUILD_ID = "beta12-delete-confirmation-diagnostics"' in source
     assert 'if (!this.dataset.snmBuild) this.dataset.snmBuild = BUILD_ID' in source
     assert 'this.dataset.snmBuild = BUILD_ID; this._editor' not in source
     assert 'data-applied-without-editor-render' in source
@@ -106,6 +108,13 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert "save_in_progress" in source
     assert "closeAfterSave" in source
     assert "Der Entwurf bleibt erhalten." in source
+    assert "createDeleteTrace" in source
+    assert "getDeleteTrace" in source
+    assert 'smart_notification_manager/delete' in source
+    assert 'Diese Regel wirklich löschen?' in source
+    assert 'Löschen…' in source
+    assert 'response?.deleted !== true' in source
+    assert 'closeAfterDelete' in source
     assert "mindestens ${trigger.minimum_duration_seconds} Sekunden" in source
     assert "ausgelöst." in source
     assert 'node.kind === "all" || node.kind === "any"' in source
