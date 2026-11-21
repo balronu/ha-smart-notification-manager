@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="de">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Area filter fixture</title></head>
+  <body><smart-notification-rule-editor></smart-notification-rule-editor>
+    <script src="smart-notification-manager.js"></script>
+    <script>
+      const editor = document.querySelector("smart-notification-rule-editor");
+      editor.data = {
+        entities: [
+          { entity_id: "sensor.kitchen_temperature_long_identifier", friendly_name: "Küche Temperatur", area_id: "kitchen", area_name: "Küche", state: "21" },
+          { entity_id: "binary_sensor.living_window", friendly_name: "Wohnzimmerfenster", area_id: "living", area_name: "Wohnzimmer", state: "off" },
+          { entity_id: "sensor.no_area", friendly_name: "Ohne Bereich", area_id: null, area_name: null, state: "on" }
+        ], rules: [], onSave: () => {}
+      };
+      editor.open();
+    </script>
+  </body>
+</html>

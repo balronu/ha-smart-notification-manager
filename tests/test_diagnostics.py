@@ -40,8 +40,8 @@ def test_diagnostics_view_uses_home_assistant_auth_and_no_external_telemetry():
     assert "Authorization" not in DIAGNOSTIC_HTML
     assert "document.cookie" not in DIAGNOSTIC_HTML
     assert "navigator.clipboard?.writeText" in DIAGNOSTIC_HTML
-    assert 'v=5' in PANEL_RESOURCE
-    assert 'beta6-custom-element-lifecycle' in DIAGNOSTIC_HTML
+    assert 'v=6' in PANEL_RESOURCE
+    assert 'beta7-area-entity-filter' in DIAGNOSTIC_HTML
 
 
 @pytest.mark.asyncio

@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.1.0-beta.7 – Bereichsfilter für Entitätsauswahl
+
+### Deutsch
+
+- Verwendet den im Regelkopf ausgewählten Home-Assistant-Bereich als
+  Standardfilter für Entitätsauswahlen in Auslösern und Bedingungen.
+- Nutzt die offiziellen Entity-/Device-/Area-Registry-Zuordnungen; direkte
+  Entity-Area-Zuordnungen haben Vorrang vor der Device-Area.
+- Bietet „Alle Bereiche“, behält bewusst abweichende Filter bei und löscht
+  beim Bereichswechsel keine bereits ausgewählten Entitäten.
+- Erhält Suche, Checkbox-Bedienung, Fokus-/Dropdown-/Draft-/White-Screen-Fix
+  und Diagnoseansicht. Issue #13 bleibt bis zur echten iPhone-Abnahme offen.
+
+### English
+
+- Uses the Home Assistant area selected in the rule header as the default
+  filter for entity pickers in triggers and conditions.
+- Uses the official entity/device/area registry relationships; a direct entity
+  area assignment takes precedence over the device area.
+- Adds “All areas”, preserves deliberate filter overrides, and never removes
+  already selected entities when the rule area changes.
+- Preserves search, checkbox interaction, focus/dropdown/draft/white-screen
+  fixes, and diagnostics. Issue #13 remains open until real iPhone acceptance.
+
 ## v0.1.0-beta.6 – Custom-Element-Initialisierung und White-Screen-Fix
 
 ### Deutsch
