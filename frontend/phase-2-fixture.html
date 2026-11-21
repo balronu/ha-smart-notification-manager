@@ -29,7 +29,7 @@
           editor.save();
           document.body.dataset.interaction = editor.shadowRoot.querySelectorAll(".condition-row").length > 0 ? "passed" : "failed";
         } catch (error) { document.body.dataset.fixtureError = error.message; }
-      }, 25);
+      }, 2000);
     </script>
   </body>
 </html>

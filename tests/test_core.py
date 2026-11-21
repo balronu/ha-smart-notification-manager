@@ -102,6 +102,18 @@ def test_state_trigger_requires_an_actual_transition():
     assert not evaluate_state_trigger("unavailable", "unavailable", from_state=None, to_state=None, unavailable_policy="match")
 
 
+def test_state_trigger_holds_target_state_then_fires_once():
+    started = datetime(2026, 1, 1, 12, tzinfo=UTC)
+    assert not evaluate_state_trigger("on", "on", from_state=None, to_state="on", minimum_duration_seconds=120, state_started_at=started, now=started.replace(minute=1, second=59))
+    assert evaluate_state_trigger("on", "on", from_state=None, to_state="on", minimum_duration_seconds=120, state_started_at=started, now=started.replace(minute=2))
+    assert not evaluate_state_trigger("on", "on", from_state=None, to_state="on", minimum_duration_seconds=120, state_started_at=started, now=started.replace(minute=3), already_triggered=True)
+
+
+def test_state_trigger_aborts_hold_when_target_state_changes():
+    started = datetime(2026, 1, 1, 12, tzinfo=UTC)
+    assert not evaluate_state_trigger("on", "off", from_state=None, to_state="on", minimum_duration_seconds=120, state_started_at=started, now=started.replace(minute=3))
+
+
 def test_presence_requires_a_known_boolean_state():
     present = ConditionNode("presence", {"entity_id": "person.michael", "present": True})
     absent = ConditionNode("presence", {"entity_id": "person.michael", "present": False})

@@ -79,12 +79,14 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert (FRONTEND.parent / "phase-5-policy-fixture.html").exists()
     assert (FRONTEND.parent / "phase-9-automation-migration-fixture.html").exists()
     assert (FRONTEND.parent / "phase-12-statistics-fixture.html").exists()
+    assert (FRONTEND.parent / "rule-validation-fixture.html").exists()
+    assert (FRONTEND.parent.parent / "tests" / "e2e" / "rule-validation.mjs").exists()
     assert (FRONTEND.parent.parent / "tests" / "e2e" / "editor-select.mjs").exists()
     assert (FRONTEND.parent.parent / "tests" / "e2e" / "panel-lifecycle.mjs").exists()
     assert (FRONTEND.parent / "panel-lifecycle-fixture.html").exists()
     assert (FRONTEND.parent.parent / "tests" / "test_diagnostics.py").exists()
     assert (FRONTEND.parent.parent / "tests" / "e2e" / "diagnostics.mjs").exists()
-    assert 'const BUILD_ID = "beta8-mobile-panel-navigation"' in source
+    assert 'const BUILD_ID = "beta9-rule-validation"' in source
     assert 'if (!this.dataset.snmBuild) this.dataset.snmBuild = BUILD_ID' in source
     assert 'this.dataset.snmBuild = BUILD_ID; this._editor' not in source
     assert 'data-applied-without-editor-render' in source
@@ -94,6 +96,12 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert "Alle Bereiche" in source
     assert "_entityFilterOverride" in source
     assert "bereits ausgewählt, außerhalb des Filters" in source
+    assert "min-width:0;overflow-wrap:anywhere" in source
+    assert "mindestens ${trigger.minimum_duration_seconds} Sekunden" in source
+    assert "ausgelöst." in source
+    assert 'node.kind === "all" || node.kind === "any"' in source
+    assert 'node.kind === "all" ? " und " : " oder "' in source
+    assert "mindestens eine Bedingung angeben" not in source
     assert "entityMatchesArea" in source
     assert "area_id || (device.area_id" not in source
     assert 'aria-label", "Home Assistant Navigation"' in source

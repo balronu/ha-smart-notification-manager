@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Beta `v0.1.0-beta.8`:** Das Panel bleibt in der Home-Assistant-Shell, die native mobile Navigation bleibt verfügbar, und eine sichere „Zur Übersicht“-Notfallnavigation schützt ungespeicherte Entwürfe. Die echte authentifizierte iPhone-Abnahme bleibt offen.
+> **Beta `v0.1.0-beta.9`:** Regeln können ohne zusätzliche Bedingungen gespeichert werden; Mindestdauer, Abbruch, mobile Entitätsauswahl und die deutschsprachige Vorschau sind konsistent validiert. Die echte authentifizierte iPhone-/Companion-Abnahme bleibt offen.
 
 ## Ziel
 
@@ -115,7 +115,7 @@ bestehende Alarm- und RuleStore-Datenkette.
 1. In HACS **Benutzerdefinierte Repositories** öffnen.
 2. `balronu/ha-smart-notification-manager` als Repository vom Typ
    **Integration** hinzufügen.
-3. Die Vorabversion `v0.1.0-beta.8` auswählen und installieren.
+3. Die Vorabversion `v0.1.0-beta.9` auswählen und installieren.
 4. Home Assistant nach den üblichen eigenen Installationsschritten neu laden
    und die Integration über **Einstellungen → Geräte & Dienste** einrichten.
 
@@ -137,10 +137,10 @@ Michael Dick.
 ## English summary
 
 Smart Notification Manager is a German-first Home Assistant custom integration.
-`v0.1.0-beta.8` is a manually installable public beta. The panel stays in the
-Home Assistant shell, preserves native mobile navigation, and provides a safe
-overview link with an unsaved-draft guard. Authenticated iPhone acceptance
-remains open.
+`v0.1.0-beta.9` is a manually installable public beta. Rules can be saved
+without optional conditions; minimum-duration semantics, mobile entity
+selection, and the German preview are validated consistently. Authenticated
+iPhone/Companion acceptance remains open.
 Telegram,
 WhatsApp and telephony are optional; missing services do not block core setup.
 Authenticated HA browser E2E and manual practical results remain open, so this
