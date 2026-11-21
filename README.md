@@ -2,7 +2,7 @@
 
 Zentrale, nachvollziehbare Benachrichtigungsverwaltung als Home-Assistant-Custom-Integration mit deutscher Primärdokumentation.
 
-> **Diagnose-Beta `v0.1.0-beta.5`:** Dieser manuell installierbare öffentliche Teststand ergänzt eine eigenständige, HA-authentifizierte Diagnoseansicht für den iOS-White-Screen. Er behebt den White-Screen noch nicht und ist keine vollständige Produktabnahme; die authentifizierte HA-Browser-E2E und manuelle Praxisergebnisse stehen noch aus.
+> **Beta `v0.1.0-beta.7`:** Die Entitätsauswahl verwendet den Regelbereich als Standardfilter, unterstützt „Alle Bereiche“ und erhält bewusst abweichende Filter sowie bereits gespeicherte Entitäten außerhalb des Filters. Die echte authentifizierte iPhone-Abnahme bleibt offen.
 
 ## Ziel
 
@@ -115,7 +115,7 @@ bestehende Alarm- und RuleStore-Datenkette.
 1. In HACS **Benutzerdefinierte Repositories** öffnen.
 2. `balronu/ha-smart-notification-manager` als Repository vom Typ
    **Integration** hinzufügen.
-3. Die Vorabversion `v0.1.0-beta.5` auswählen und installieren.
+3. Die Vorabversion `v0.1.0-beta.7` auswählen und installieren.
 4. Home Assistant nach den üblichen eigenen Installationsschritten neu laden
    und die Integration über **Einstellungen → Geräte & Dienste** einrichten.
 
@@ -137,9 +137,10 @@ Michael Dick.
 ## English summary
 
 Smart Notification Manager is a German-first Home Assistant custom integration.
-`v0.1.0-beta.5` is a manually installable public diagnostic beta. It adds an
-authenticated standalone diagnostic page for the iOS white-screen report; it
-does not claim to fix the white screen.
+`v0.1.0-beta.7` is a manually installable public beta. Entity pickers use the
+rule area as their default filter, support “All areas”, and preserve deliberate
+filter overrides and already selected entities outside the filter. Authenticated
+iPhone acceptance remains open.
 Telegram,
 WhatsApp and telephony are optional; missing services do not block core setup.
 Authenticated HA browser E2E and manual practical results remain open, so this
