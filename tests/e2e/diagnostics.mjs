@@ -57,7 +57,7 @@ const run = async (name, browserType, options = {}) => {
     const summary = await page.locator("#summary").innerText();
     if (!body.includes("Panel-Ressource") || !body.includes("Panel-Initialisierung") || !body.includes("HA-WebSocket")) throw new Error("Prüfungen fehlen");
     if (!summary.startsWith("Diagnose abgeschlossen")) throw new Error(`Diagnose nicht abgeschlossen: ${summary}`);
-    if (statuses[0] !== "OK" || statuses[1] !== "OK" || statuses[2] !== "OK") throw new Error(`Diagnoseprüfung fehlgeschlagen: ${statuses.join(", ")} · ${body}`);
+    if (statuses[0] !== "OK" || statuses[1] !== "OK" || statuses[2] !== "Nicht prüfbar" || statuses[3] !== "OK" || statuses[4] !== "OK") throw new Error(`Diagnoseprüfung fehlgeschlagen: ${statuses.join(", ")} · ${body}`);
     if (pageErrors.length || consoleErrors.length) throw new Error(`Unerwartete Browserfehler: ${[...pageErrors, ...consoleErrors].join(" | ")}`);
 
     await page.evaluate(async () => {

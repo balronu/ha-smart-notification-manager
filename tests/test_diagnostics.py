@@ -36,13 +36,16 @@ def test_diagnostics_view_uses_home_assistant_auth_and_no_external_telemetry():
     assert SmartNotificationManagerDiagnosticsView.url == DIAGNOSTIC_URL
     assert PANEL_RESOURCE in DIAGNOSTIC_HTML
     assert BUILD_ID in DIAGNOSTIC_HTML
-    assert "smart-notification-manager.js?v=8" in DIAGNOSTIC_HTML
+    assert "smart-notification-manager.js?v=9" in DIAGNOSTIC_HTML
     assert "navigator.sendBeacon" not in DIAGNOSTIC_HTML
     assert "Authorization" not in DIAGNOSTIC_HTML
     assert "document.cookie" not in DIAGNOSTIC_HTML
     assert "navigator.clipboard?.writeText" in DIAGNOSTIC_HTML
-    assert 'v=8' in PANEL_RESOURCE
-    assert 'beta10-save-path-cache-fix' in DIAGNOSTIC_HTML
+    assert 'v=9' in PANEL_RESOURCE
+    assert 'beta11-save-confirmation-diagnostics' in DIAGNOSTIC_HTML
+    assert 'save_trace' in DIAGNOSTIC_HTML
+    assert 'Save-Trace' in DIAGNOSTIC_HTML
+    assert 'nicht bestätigt' in DIAGNOSTIC_HTML
 
 
 @pytest.mark.asyncio
