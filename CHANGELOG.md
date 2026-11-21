@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.1.0-beta.11 – Bestätigter Speichervorgang und Save-Diagnose
+
+### Deutsch
+
+- Behebt den nachgewiesenen Beta.10-Abbruch: Der Frontend-Save-Handler wartet jetzt auf WebSocket-Antwort und Listenaktualisierung, bevor der Editor schließt.
+- Zeigt während des Speicherns einen Ladezustand, verhindert Doppelklick-Saves, meldet Fehler konkret und erhält den Draft bei Fehlern.
+- Bedingungen bleiben optional; Name, Auslöser, Entitäten und Zahlenwerte werden feldbezogen validiert. Gültige Werte wie `120` und `0` bleiben zulässig.
+- Ergänzt einen datenschutzfreundlichen Save-Trace mit Build-ID, Status und Fehlercodes; nicht ausgeführte Schritte bleiben „nicht bestätigt“.
+- Echter isolierter HA-WebSocket-/SQLite-Roundtrip sowie Chromium Desktop/Mobile und WebKit Mobile decken Speichern und Wiederladen ab.
+- Keine Änderungen an VM104, produktiven Regeln oder echten Benachrichtigungen. Issue #13 bleibt offen.
+
+### English
+
+- Fixes the confirmed Beta.10 save-path break: the frontend save handler now awaits the WebSocket response and list refresh before closing the editor.
+- Shows a loading state, prevents double saves, reports concrete errors, and preserves the draft on failure.
+- Conditions remain optional; name, trigger, entity, and numeric fields use field-specific validation. Valid values such as `120` and `0` remain accepted.
+- Adds a privacy-safe save trace with build ID, statuses, and error codes; steps not executed remain “not confirmed”.
+- An isolated real HA WebSocket/SQLite round trip plus Chromium Desktop/Mobile and WebKit Mobile cover save and reload.
+- No changes to VM104, productive rules, or real notifications. Issue #13 remains open.
+
 ## v0.1.0-beta.10 – Speichervorgang und Cache-Artefakt
 
 ### Deutsch

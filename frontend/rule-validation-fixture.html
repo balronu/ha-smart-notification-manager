@@ -11,12 +11,13 @@
         { entity_id: "binary_sensor.wohnzimmer_fenster", friendly_name: "Living-room window", area_id: "wohnzimmer", area_name: "Wohnzimmer", state: "off" },
       ];
       let rules = [];
-      const applyData = () => editor.data = { entities, rules, onSave: (rule) => {
+      const applyData = () => editor.data = { entities, rules, onSave: async (rule) => {
         rules = [{ ...structuredClone(rule), rule_id: "fixture-rule" }];
         document.body.dataset.saved = "passed";
         document.body.dataset.conditions = String(rule.conditions.children.length);
-        editor._draft = null;
         applyData();
+        editor.closeAfterSave();
+        return { success: true, rule: rules[0] };
       } };
       applyData();
       editor.open();

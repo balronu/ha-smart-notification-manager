@@ -33,8 +33,10 @@ for (const [browserName, browserType, cases] of [["Chromium", chromium, [["deskt
       if (!(await editor.locator('.selection-summary').textContent()).includes("1 Entität")) throw new Error(`${name}: Auswahlzähler blieb nach Filterwechsel inkonsistent`);
       const preview = await editor.locator(".preview p").textContent();
     if (!preview.includes("Door sensor im Bereich Eingang") || !preview.includes("mindestens 120 Sekunden") || preview.includes("Empfänger") || preview.includes("Zustellung")) throw new Error(`${name}: Vorschau ist nicht semantisch korrekt`);
-    await editor.locator('[data-action="save"]').click();
+      await editor.locator('[data-action="save"]').click();
       if (await page.locator("body").getAttribute("data-saved") !== "passed" || await page.locator("body").getAttribute("data-conditions") !== "0") throw new Error(`${name}: Regel ohne Bedingungen wurde nicht gespeichert`);
+      if (!(await page.getByRole("status").textContent()).includes("Regel gespeichert.")) throw new Error(`${name}: sichtbare Erfolgsbestätigung fehlt`);
+      if (await editor.locator('[data-field="name"]').count() !== 0) throw new Error(`${name}: Editor wurde nach bestätigtem Speichern nicht geschlossen`);
       await editor.locator('[data-rule]').click();
       if (!(await editor.locator('[data-trigger-entity="binary_sensor.haustur_door_sensor"]').isChecked())) throw new Error(`${name}: gespeicherte Auswahl wurde beim erneuten Laden nicht wiederhergestellt`);
       if (await editor.locator('[data-field="name"]').inputValue() !== "Haustür noch offen") throw new Error(`${name}: gespeicherte Regel wurde nicht wieder geladen`);

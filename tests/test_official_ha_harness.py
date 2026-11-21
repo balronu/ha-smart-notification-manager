@@ -162,6 +162,74 @@ async def test_official_harness_empty_panel_lists_are_loadable(
 
 
 @pytest.mark.asyncio
+async def test_official_harness_save_round_trip_without_conditions(
+    hass: HomeAssistant,
+    tmp_path: Path,
+    hass_access_token: str,
+    hass_ws_client,
+    enable_custom_integrations,
+) -> None:
+    """The published editor payload persists and reloads through real HA WS."""
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={},
+        options={CONF_LANGUAGE: "de", CONF_DB_PATH: str(tmp_path / "save-round-trip.sqlite3")},
+        title="Smart Notification Manager",
+    )
+    entry.add_to_hass(hass)
+    area = area_registry.async_get(hass).async_create("Eingang")
+    registry = entity_registry.async_get(hass)
+    registry.async_get_or_create(
+        "binary_sensor",
+        "official_harness",
+        "door_sensor",
+        suggested_object_id="haustur_door_sensor",
+    )
+    registry.async_update_entity("binary_sensor.haustur_door_sensor", area_id=area.id)
+    hass.states.async_set("binary_sensor.haustur_door_sensor", "on")
+    assert await async_setup_component(hass, "http", {})
+    assert await async_setup_component(hass, "frontend", {})
+    assert await async_setup_component(hass, "websocket_api", {})
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    client = await hass_ws_client(hass, access_token=hass_access_token)
+    await client.send_json({"id": 1, "type": "smart_notification_manager/save", "rule": {
+        "name": "Haustür offen",
+        "description": "",
+        "category": "Sicherheit",
+        "area_id": area.id,
+        "area_name": "Eingang",
+        "priority": "warning",
+        "enabled": True,
+        "version": 1,
+        "triggers": [{
+            "kind": "state", "entity_ids": ["binary_sensor.haustur_door_sensor"],
+            "from_state": None, "to_state": "on", "minimum_duration_seconds": 120,
+            "delay_seconds": 0, "unknown_policy": "ignore", "unavailable_policy": "ignore",
+        }],
+        "conditions": {"kind": "all", "children": []},
+    }})
+    saved = await client.receive_json()
+    assert saved["id"] == 1
+    assert saved["success"] is True
+    rule_id = saved["result"]["rule"]["rule_id"]
+    assert saved["result"]["rule"]["triggers"][0]["minimum_duration_seconds"] == 120
+
+    await client.send_json({"id": 2, "type": "smart_notification_manager/list"})
+    listed = await client.receive_json()
+    assert listed["id"] == 2
+    assert listed["success"] is True
+    reloaded = next(rule for rule in listed["result"]["rules"] if rule["rule_id"] == rule_id)
+    assert reloaded["conditions"] == {"kind": "all", "value": None, "children": []}
+    assert reloaded["triggers"][0]["entity_ids"] == ["binary_sensor.haustur_door_sensor"]
+
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+
+
+@pytest.mark.asyncio
 async def test_official_harness_non_admin_user_is_not_admin(
     hass: HomeAssistant, hass_read_only_user
 ) -> None:

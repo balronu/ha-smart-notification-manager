@@ -86,7 +86,7 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert (FRONTEND.parent / "panel-lifecycle-fixture.html").exists()
     assert (FRONTEND.parent.parent / "tests" / "test_diagnostics.py").exists()
     assert (FRONTEND.parent.parent / "tests" / "e2e" / "diagnostics.mjs").exists()
-    assert 'const BUILD_ID = "beta10-save-path-cache-fix"' in source
+    assert 'const BUILD_ID = "beta11-save-confirmation-diagnostics"' in source
     assert 'if (!this.dataset.snmBuild) this.dataset.snmBuild = BUILD_ID' in source
     assert 'this.dataset.snmBuild = BUILD_ID; this._editor' not in source
     assert 'data-applied-without-editor-render' in source
@@ -98,6 +98,14 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert "bereits ausgewählt, außerhalb des Filters" in source
     assert "min-width:0;overflow-wrap:anywhere" in source
     assert "refreshSelectionSummaries" in source
+    assert "createSaveTrace" in source
+    assert "getSaveTrace" in source
+    assert "save_handler_reached" in source
+    assert "backend_persistence_confirmed" in source
+    assert "Speichern…" in source
+    assert "save_in_progress" in source
+    assert "closeAfterSave" in source
+    assert "Der Entwurf bleibt erhalten." in source
     assert "mindestens ${trigger.minimum_duration_seconds} Sekunden" in source
     assert "ausgelöst." in source
     assert 'node.kind === "all" || node.kind === "any"' in source

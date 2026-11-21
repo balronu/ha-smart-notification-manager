@@ -81,14 +81,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             webcomponent_name="smart-notification-manager-panel",
             sidebar_title="Benachrichtigungen",
             sidebar_icon="mdi:bell-outline",
-            module_url=f"{FRONTEND_URL_BASE}/smart-notification-manager.js?v=8",
+            module_url=f"{FRONTEND_URL_BASE}/smart-notification-manager.js?v=9",
             # Keep the panel in the HA shell so native sidebar/mobile navigation remains available.
             embed_iframe=False,
             handle_safe_area=True,
             require_admin=True,
             config_panel_domain=DOMAIN,
         )
-        frontend.add_extra_js_url(hass, f"{FRONTEND_URL_BASE}/smart-notification-manager.js?v=8")
+        frontend.add_extra_js_url(hass, f"{FRONTEND_URL_BASE}/smart-notification-manager.js?v=9")
         frontend.add_extra_js_url(hass, f"{FRONTEND_URL_BASE}/smart-notification-manager-card.js?v=1")
         frontend.add_extra_js_url(hass, f"{FRONTEND_URL_BASE}/phase-8-rule-wizard.js?v=1")
         frontend.add_extra_js_url(hass, f"{FRONTEND_URL_BASE}/phase-9-automation-migration.js?v=1")
