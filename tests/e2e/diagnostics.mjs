@@ -57,9 +57,37 @@ const run = async (name, browserType, options = {}) => {
     const summary = await page.locator("#summary").innerText();
     if (!body.includes("Panel-Ressource") || !body.includes("Panel-Initialisierung") || !body.includes("HA-WebSocket")) throw new Error("Prüfungen fehlen");
     if (!summary.startsWith("Diagnose abgeschlossen")) throw new Error(`Diagnose nicht abgeschlossen: ${summary}`);
-    if (statuses[0] !== "OK" || statuses[2] !== "OK") throw new Error(`Ressource oder WebSocket nicht erreichbar: ${statuses.join(", ")} · ${body}`);
-    if (!pageErrors.some((error) => error.includes("must not have attributes")) || consoleErrors.length) throw new Error(`Unerwartete Browserfehler: ${[...pageErrors, ...consoleErrors].join(" | ")}`);
-    console.log(JSON.stringify({ browser: name, statuses, capturedPanelFailure: pageErrors[0], consoleErrors }));
+    if (statuses[0] !== "OK" || statuses[1] !== "OK" || statuses[2] !== "OK") throw new Error(`Diagnoseprüfung fehlgeschlagen: ${statuses.join(", ")} · ${body}`);
+    if (pageErrors.length || consoleErrors.length) throw new Error(`Unerwartete Browserfehler: ${[...pageErrors, ...consoleErrors].join(" | ")}`);
+
+    await page.evaluate(async () => {
+      const panel = document.createElement("smart-notification-manager-panel");
+      if (panel.hasAttribute("data-snm-build")) throw new Error("Panel trägt beim Konstruktor bereits Attribute");
+      panel.style.display = "block";
+      panel.style.width = "100%";
+      document.body.append(panel);
+      panel.hass = {
+        connection: {},
+        callWS: async (message) => message.type === "smart_notification_manager/list"
+          ? { rules: [], entities: [{ entity_id: "sensor.test", friendly_name: "Test", area_id: "area", area_name: "Wohnzimmer", state: "on" }] }
+          : { recipients: [], groups: [], channels: [], totals: {}, daily: {}, monthly: {} },
+      };
+      await panel.load();
+      panel._editor.data = { rules: [], entities: [{ entity_id: "sensor.test", friendly_name: "Test", area_id: "area", area_name: "Wohnzimmer", state: "on" }] };
+      window.__beta6Panel = panel;
+    });
+    const panel = page.locator("smart-notification-manager-panel").last();
+    const editor = panel.locator("smart-notification-rule-editor").last();
+    if (!(await editor.evaluate((element) => element.shadowRoot?.childElementCount > 0))) throw new Error(`${name}: erster sichtbarer Editor-Render fehlt`);
+    await editor.locator('[data-action="new"]').first().click({ force: true });
+    const nameField = editor.locator('[data-field="name"]');
+    await nameField.focus({ force: true });
+    await page.keyboard.type("Beta 6 Entwurf");
+    if (await nameField.inputValue() !== "Beta 6 Entwurf") throw new Error(`${name}: Texteingabe verloren`);
+    await editor.locator('[data-field="area_id"]').selectOption("area", { force: true });
+    await editor.locator('[data-field="priority"]').selectOption("critical", { force: true });
+    if (await editor.locator('[data-field="area_id"]').inputValue() !== "area" || await editor.locator('[data-field="priority"]').inputValue() !== "critical") throw new Error(`${name}: Dropdown-Auswahl verloren`);
+    console.log(JSON.stringify({ browser: name, statuses, customElementCreate: true, initialRender: true, buildId: await panel.getAttribute("data-snm-build"), focus: true, dropdowns: true, consoleErrors }));
   } finally {
     await browser.close();
   }

@@ -1,7 +1,7 @@
 /* Smart Notification Manager – visual German rule editor, Phase 2. */
 (function () {
   "use strict";
-  const BUILD_ID = "beta4-editor-lifecycle";
+  const BUILD_ID = "beta6-custom-element-lifecycle";
   let nextDiagnosticInstanceId = 1;
   const diagnosticsEnabled = () => {
     try {
@@ -113,7 +113,7 @@
   }
 
   class SmartNotificationManagerPanel extends HTMLElement {
-    constructor() { super(); this.attachShadow({ mode: "open" }); this._diagnosticInstanceId = `panel-${nextDiagnosticInstanceId++}`; this.dataset.snmBuild = BUILD_ID; this._editor = document.createElement("smart-notification-rule-editor"); this._editor._diagnosticInstanceId = `${this._diagnosticInstanceId}-editor`; this._recipients = document.createElement("smart-notification-recipient-manager"); this.shadowRoot.append(this._editor, this._recipients); diagnosticLog(this._diagnosticInstanceId, "constructed"); }
+    constructor() { super(); this.attachShadow({ mode: "open" }); this._diagnosticInstanceId = `panel-${nextDiagnosticInstanceId++}`; this._editor = document.createElement("smart-notification-rule-editor"); this._editor._diagnosticInstanceId = `${this._diagnosticInstanceId}-editor`; this._recipients = document.createElement("smart-notification-recipient-manager"); this.shadowRoot.append(this._editor, this._recipients); diagnosticLog(this._diagnosticInstanceId, "constructed"); }
     set hass(value) {
       const initialConnection = !this._hass;
       const connectionChanged = initialConnection || this._hass.connection !== value?.connection;
@@ -121,7 +121,7 @@
       diagnosticLog(this._diagnosticInstanceId, "hass-update", { connection_changed: connectionChanged });
       if (connectionChanged) this.load();
     }
-    connectedCallback() { diagnosticLog(this._diagnosticInstanceId, "connected"); this.load(); }
+    connectedCallback() { if (!this.dataset.snmBuild) this.dataset.snmBuild = BUILD_ID; diagnosticLog(this._diagnosticInstanceId, "connected"); this.load(); }
     async load() { if (!this._hass?.callWS) return; try { const data = await this._hass.callWS({ type: "smart_notification_manager/list" }); this._editor.data = { rules: data.rules, entities: data.entities, onSave: (rule) => this.save(rule), onDelete: (id) => this.remove(id), onDuplicate: (rule) => this.duplicate(rule) }; const delivery = await this._hass.callWS({ type: "smart_notification_manager/recipient/list" }); this._recipients.data = { ...delivery, onSave: (recipient) => this.saveRecipient(recipient), onGroupSave: (group) => this.saveGroup(group) }; } catch (error) { this._editor.data = { rules: [], entities: [] }; this._editor._error = "Regeln und Empfänger konnten nicht geladen werden."; this._editor.render(); } }
     async save(rule) { try { await this._hass.callWS({ type: "smart_notification_manager/save", rule }); await this.load(); } catch (error) { this._editor._error = "Die Regel konnte nicht gespeichert werden. Prüfe die Eingaben oder die Berechtigung."; this._editor.render(); } }
     async remove(ruleId) { try { await this._hass.callWS({ type: "smart_notification_manager/delete", rule_id: ruleId }); await this.load(); } catch (error) { this._editor._error = "Die Regel konnte nicht gelöscht werden."; this._editor.render(); } }

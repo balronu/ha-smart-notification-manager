@@ -6,8 +6,8 @@ from aiohttp import web
 from homeassistant.helpers.http import HomeAssistantView
 
 DIAGNOSTIC_URL = "/api/smart_notification_manager/diagnostics"
-PANEL_RESOURCE = "/smart_notification_manager_static/smart-notification-manager.js?v=4"
-BUILD_ID = "beta4-editor-lifecycle"
+PANEL_RESOURCE = "/smart_notification_manager_static/smart-notification-manager.js?v=5"
+BUILD_ID = "beta6-custom-element-lifecycle"
 
 DIAGNOSTIC_HTML = r"""<!doctype html>
 <html lang="de">
@@ -44,8 +44,8 @@ DIAGNOSTIC_HTML = r"""<!doctype html>
 <script>
 (() => {
   "use strict";
-  const BUILD_ID = "beta4-editor-lifecycle";
-  const RESOURCE = "/smart_notification_manager_static/smart-notification-manager.js?v=4";
+  const BUILD_ID = "beta6-custom-element-lifecycle";
+  const RESOURCE = "/smart_notification_manager_static/smart-notification-manager.js?v=5";
   const checks = new Map();
   const errors = [];
   let report = null;
@@ -71,7 +71,7 @@ DIAGNOSTIC_HTML = r"""<!doctype html>
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const text = await response.text();
     if (!text.includes(`const BUILD_ID = "${BUILD_ID}"`)) throw new Error("Build-ID im geladenen Artefakt fehlt");
-    setCheck("Panel-Ressource", "ok", `${response.status} · ${new URL(response.url).pathname}?v=4 · Build ${BUILD_ID}`);
+    setCheck("Panel-Ressource", "ok", `${response.status} · ${new URL(response.url).pathname}?v=5 · Build ${BUILD_ID}`);
   }
 
   async function checkPanel() {
@@ -80,13 +80,16 @@ DIAGNOSTIC_HTML = r"""<!doctype html>
     const registered = customElements.get("smart-notification-manager-panel");
     if (!registered) throw new Error("Custom Element nicht registriert");
     const panel = document.createElement("smart-notification-manager-panel");
+    if (panel.hasAttribute("data-snm-build")) throw new Error("Build-ID wurde unzulässig im Konstruktor gesetzt");
     panel.hidden = true;
     document.body.append(panel);
     await new Promise((resolve) => requestAnimationFrame(resolve));
     const build = panel.dataset.snmBuild || "nicht gesetzt";
     const rendered = Boolean(panel.shadowRoot && panel.shadowRoot.childElementCount);
+    const editorRendered = Boolean(panel.shadowRoot?.querySelector("smart-notification-rule-editor")?.shadowRoot?.childElementCount);
     panel.remove();
-    if (!rendered) throw new Error("Kein sichtbarer Initial-Render");
+    if (!rendered || !editorRendered) throw new Error("Kein sichtbarer Initial-Render");
+    if (build !== BUILD_ID) throw new Error(`Unerwartete Build-ID: ${build}`);
     setCheck("Panel-Initialisierung", "ok", `Custom Element, connectedCallback und Initial-Render · ${build}`);
   }
 

@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.1.0-beta.6 – Custom-Element-Initialisierung und White-Screen-Fix
+
+### Deutsch
+
+- Behebt den iOS-/WebKit-White-Screen: Die Panel-Build-ID wird nicht mehr im
+  Custom-Element-Konstruktor gesetzt, sondern erst in `connectedCallback()`.
+- Aktualisiert die Frontend-Ressource auf `smart-notification-manager.js?v=5`
+  und bestätigt damit den Beta.6-Artefaktpfad.
+- Ergänzt einen Artefakt-Regressionsnachweis für `document.createElement()`,
+  Initial-Render, Build-ID, Fokus, Dropdowns, verspätete WebSocket-Antworten
+  und wiederholte `hass`-Updates in Chromium und WebKit.
+- Die unabhängige HA-Diagnose aus Beta.5 bleibt erhalten. Issue #13 bleibt bis
+  zur echten HA-Abnahme auf dem betroffenen iPhone offen.
+
+### English
+
+- Fixes the iOS/WebKit white screen: the panel build ID is no longer assigned
+  in the custom-element constructor and is set only in `connectedCallback()`.
+- Updates the frontend resource to `smart-notification-manager.js?v=5` and
+  verifies the Beta.6 artifact path.
+- Adds an artifact regression proof for `document.createElement()`, initial
+  render, build ID, focus, dropdowns, delayed WebSocket responses, and repeated
+  `hass` updates in Chromium and WebKit.
+- Keeps the independent HA diagnostics from Beta.5. Issue #13 remains open
+  until acceptance on the affected iPhone in real HA.
+
 ## v0.1.0-beta.5 – Eigenständige iOS-Diagnose
 
 ### Deutsch

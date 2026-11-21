@@ -84,7 +84,9 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert (FRONTEND.parent / "panel-lifecycle-fixture.html").exists()
     assert (FRONTEND.parent.parent / "tests" / "test_diagnostics.py").exists()
     assert (FRONTEND.parent.parent / "tests" / "e2e" / "diagnostics.mjs").exists()
-    assert 'const BUILD_ID = "beta4-editor-lifecycle"' in source
+    assert 'const BUILD_ID = "beta6-custom-element-lifecycle"' in source
+    assert 'if (!this.dataset.snmBuild) this.dataset.snmBuild = BUILD_ID' in source
+    assert 'this.dataset.snmBuild = BUILD_ID; this._editor' not in source
     assert 'data-applied-without-editor-render' in source
     assert 'preserveDraft = Boolean(this._draft)' in source
     phase9 = FRONTEND.parent / "phase-9-automation-migration.js"
