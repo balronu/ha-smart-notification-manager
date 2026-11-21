@@ -21,7 +21,7 @@ localStorage.setItem("smart_notification_manager_debug", "1")
 Die Browser-Konsole enthält dann nur Build-Kennung, Panel-/Editor-Instanz,
 Lebenszyklusereignisse, Render-Anzahl, Ursachen sowie den Status des vorher
 aktiven Elements. Die eindeutige Build-Kennung ist außerdem als
-`data-snm-build="beta4-editor-lifecycle"` am Panel-Host sichtbar.
+`data-snm-build="beta6-custom-element-lifecycle"` am Panel-Host sichtbar.
 
 Zum Deaktivieren:
 
@@ -41,7 +41,7 @@ Diagnoseseite bereit:
 ```
 
 Sie funktioniert unabhängig vom normalen Panel-Bundle und prüft die
-Erreichbarkeit der veröffentlichten `smart-notification-manager.js?v=4`, die
+Erreichbarkeit der veröffentlichten `smart-notification-manager.js?v=5`, die
 Custom-Element-Registrierung, den initialen Render, JavaScript-Fehlerkanäle
 und den HA-WebSocket-Handshake. Die Seite erzeugt keinen Zugriffstoken und
 sendet keinen Bericht an externe Server. Der WebSocket-Test prüft nur den
@@ -74,7 +74,7 @@ with `localStorage.setItem("smart_notification_manager_debug", "1")`.
 Console records contain only the build ID, panel/editor instance, lifecycle
 events, render counts, causes, and whether the previously active element was
 still connected. The panel host exposes the build ID as
-`data-snm-build="beta4-editor-lifecycle"`. This diagnostic mode does not
+`data-snm-build="beta6-custom-element-lifecycle"`. This diagnostic mode does not
 replace authenticated Home Assistant browser E2E.
 
 The standalone authenticated diagnostic page is available at
