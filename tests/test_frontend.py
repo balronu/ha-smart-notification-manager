@@ -84,7 +84,7 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert (FRONTEND.parent / "panel-lifecycle-fixture.html").exists()
     assert (FRONTEND.parent.parent / "tests" / "test_diagnostics.py").exists()
     assert (FRONTEND.parent.parent / "tests" / "e2e" / "diagnostics.mjs").exists()
-    assert 'const BUILD_ID = "beta7-area-entity-filter"' in source
+    assert 'const BUILD_ID = "beta8-mobile-panel-navigation"' in source
     assert 'if (!this.dataset.snmBuild) this.dataset.snmBuild = BUILD_ID' in source
     assert 'this.dataset.snmBuild = BUILD_ID; this._editor' not in source
     assert 'data-applied-without-editor-render' in source
@@ -96,6 +96,11 @@ def test_frontend_is_a_visual_editor_and_has_mobile_layout_contract():
     assert "bereits ausgewählt, außerhalb des Filters" in source
     assert "entityMatchesArea" in source
     assert "area_id || (device.area_id" not in source
+    assert 'aria-label", "Home Assistant Navigation"' in source
+    assert 'data-action=\"home\"' in source
+    assert "systemData?.default_panel" in source
+    assert "confirmNavigation()" in source
+    assert "Ungespeicherte Änderungen verlassen?" in source
     phase9 = FRONTEND.parent / "phase-9-automation-migration.js"
     assert phase9.exists()
     source9 = phase9.read_text(encoding="utf-8")

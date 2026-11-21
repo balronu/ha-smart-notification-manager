@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.1.0-beta.8 – Mobile Panel-Navigation und Draft-Schutz
+
+### Deutsch
+
+- Registriert das Custom Panel in der Home-Assistant-Shell statt in einem
+  iframe; dadurch bleiben die native Sidebar und mobile Navigation erreichbar.
+- Aktiviert die offizielle Safe-Area-Unterstützung für Notch und iPhone-
+  Insets.
+- Ergänzt eine dauerhaft erreichbare, kompakte „Zur Übersicht“-Navigation,
+  die den konfigurierten HA-Standardbereich verwendet und bei langen
+  Regeleditor-Formularen sichtbar bleibt.
+- Beim Verlassen mit ungespeicherten Änderungen wird eine Bestätigung gezeigt;
+  gespeicherte Regeln werden nicht verändert. Issue #13 bleibt bis zur echten
+  iPhone-Companion-Abnahme offen.
+
+### English
+
+- Registers the custom panel in the Home Assistant shell instead of an iframe,
+  keeping the native sidebar and mobile navigation available.
+- Enables Home Assistant's supported safe-area handling for iPhone notches and
+  insets.
+- Adds a compact, permanently reachable “Back to overview” navigation using
+  the configured HA default panel and remaining visible with long editor forms.
+- Leaving with unsaved changes requires confirmation; saved rules are not
+  modified. Issue #13 remains open until real iPhone Companion acceptance.
+
 ## v0.1.0-beta.7 – Bereichsfilter für Entitätsauswahl
 
 ### Deutsch

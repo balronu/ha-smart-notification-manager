@@ -25,9 +25,11 @@ jobs:
       - name: independent Playwright fixture E2E
         run: |
           npm ci --ignore-scripts
+          npx --yes playwright@1.65.1 install --with-deps webkit
           npm run e2e:phase12
           npm run e2e:editor
           npm run e2e:panel-lifecycle
+          npm run e2e:mobile-navigation
       - run: uv run python -m json.tool custom_components/smart_notification_manager/manifest.json >/dev/null
       - run: uv run python -m json.tool custom_components/smart_notification_manager/strings.json >/dev/null
       - run: uv run python -m json.tool hacs.json >/dev/null
