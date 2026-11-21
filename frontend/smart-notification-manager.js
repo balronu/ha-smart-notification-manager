@@ -1,7 +1,7 @@
 /* Smart Notification Manager – visual German rule editor, Phase 2. */
 (function () {
   "use strict";
-  const BUILD_ID = "beta7-area-entity-filter";
+  const BUILD_ID = "beta8-mobile-panel-navigation";
   let nextDiagnosticInstanceId = 1;
   const diagnosticsEnabled = () => {
     try {
@@ -108,6 +108,7 @@
     updateCondition(target) { const node = this.conditionAt(target.dataset.conditionPath); if (target.dataset.conditionDay !== undefined) { node.value.days = [...this.shadowRoot.querySelectorAll(`[data-condition-day][data-condition-path="${target.dataset.conditionPath}"]:checked`)].map((input) => Number(input.dataset.conditionDay)); return; } const key = target.dataset.conditionField; if (key === "kind") { const defaults = { entity_state: { entity_id: this._entities[0]?.entity_id || "", state: "on" }, numeric: { entity_id: this._entities[0]?.entity_id || "", comparison: "gt", threshold: 0 }, presence: { entity_id: "", present: true }, weekday: { days: [0, 1, 2, 3, 4] }, time_window: { start: "00:00", end: "23:59" } }; node.kind = target.value; node.value = defaults[target.value]; return; } node.value[key] = key === "present" ? target.value === "true" : ["threshold", "upper_threshold"].includes(key) ? Number(target.value) : target.value; }
     conditionAt(path) { let node = this._draft.conditions; if (!path) return node; for (const index of path.split(".")) node = node.children[Number(index)]; return node; }
     removeCondition(path) { const parts = path.split("."); const index = Number(parts.pop()); this.conditionAt(parts.join(".")).children.splice(index, 1); }
+    confirmNavigation() { if (!this._draft || !this._dirty) return true; this.syncForm(); return window.confirm("Ungespeicherte Änderungen verlassen? Der Entwurf wird nicht gespeichert."); }
     refreshList() { const list = this.shadowRoot.querySelector(".rule-items"); if (!list) return; const needle = this._query.trim().toLowerCase(); const visible = this._rules.filter((rule) => !needle || `${rule.name} ${rule.category} ${rule.area_name || ""}`.toLowerCase().includes(needle)); list.innerHTML = visible.length ? visible.map((rule) => this.ruleItem(rule)).join("") : '<p class="empty">Keine Regeln gefunden.</p>'; }
     refreshPickers() { this.shadowRoot.querySelectorAll("[data-entity-picker]").forEach((picker) => { const index = Number(picker.dataset.entityPicker); picker.innerHTML = this.entityOptions(new Set(this._draft.triggers[index].entity_ids || []), index); }); }
     open(ruleId) { if (this._dirty && !window.confirm("Ungespeicherte Änderungen verwerfen?")) return; const source = this._rules.find((rule) => rule.rule_id === ruleId); this._selectedId = ruleId || null; this._draft = source ? structuredClone(source) : { rule_id: "", name: "", description: "", category: "Sonstiges", area_id: null, priority: "normal", enabled: true, version: 1, triggers: [{ kind: "state", entity_ids: [], to_state: "on", from_state: null, minimum_duration_seconds: 0, delay_seconds: 0, unknown_policy: "ignore", unavailable_policy: "ignore" }], conditions: { kind: "all", children: [] } }; this._entityQuery = ""; this._entityAreaFilter = "__rule_area__"; this._entityFilterOverride = false; this._error = ""; this._dirty = false; this.render(); }
@@ -117,11 +118,19 @@
   }
 
   class SmartNotificationManagerPanel extends HTMLElement {
-    constructor() { super(); this.attachShadow({ mode: "open" }); this._diagnosticInstanceId = `panel-${nextDiagnosticInstanceId++}`; this._editor = document.createElement("smart-notification-rule-editor"); this._editor._diagnosticInstanceId = `${this._diagnosticInstanceId}-editor`; this._recipients = document.createElement("smart-notification-recipient-manager"); this.shadowRoot.append(this._editor, this._recipients); diagnosticLog(this._diagnosticInstanceId, "constructed"); }
+    constructor() {
+      super(); this.attachShadow({ mode: "open" }); this._diagnosticInstanceId = `panel-${nextDiagnosticInstanceId++}`;
+      this._navigation = document.createElement("nav"); this._navigation.setAttribute("aria-label", "Home Assistant Navigation");
+      this._navigation.addEventListener("click", (event) => { const link = event.target.closest('[data-action="home"]'); if (!link) return; event.preventDefault(); if (!this._editor.confirmNavigation()) return; window.location.assign(link.href); });
+      this._editor = document.createElement("smart-notification-rule-editor"); this._editor._diagnosticInstanceId = `${this._diagnosticInstanceId}-editor`;
+      this._recipients = document.createElement("smart-notification-recipient-manager"); this.shadowRoot.append(this._navigation, this._editor, this._recipients); this.renderNavigation(); diagnosticLog(this._diagnosticInstanceId, "constructed");
+    }
+    overviewHref() { const configured = this._hass?.systemData?.default_panel || this._hass?.userData?.default_panel; return configured ? `/${String(configured).replace(/^\/+/, "")}` : "/"; }
+    renderNavigation() { this._navigation.innerHTML = `<style>:host{display:block}nav{position:sticky;top:0;z-index:1000;display:flex;align-items:center;min-height:48px;padding:8px 16px;padding-top:calc(8px + env(safe-area-inset-top, 0px));background:var(--card-background-color,#fff);border-bottom:1px solid var(--divider-color,#d9e0e7);box-shadow:0 1px 3px #17212b18}a{display:inline-flex;align-items:center;min-height:40px;padding:0 13px;border:1px solid var(--divider-color,#c7d1da);border-radius:8px;color:var(--primary-color,#1769aa);font:600 14px system-ui,-apple-system,sans-serif;text-decoration:none}a:focus-visible{outline:3px solid color-mix(in srgb,var(--primary-color,#1769aa) 35%,transparent);outline-offset:2px}</style><a data-action="home" href="${this.overviewHref()}">← Zur Übersicht</a>`; }
     set hass(value) {
       const initialConnection = !this._hass;
       const connectionChanged = initialConnection || this._hass.connection !== value?.connection;
-      this._hass = value;
+      this._hass = value; this.renderNavigation();
       diagnosticLog(this._diagnosticInstanceId, "hass-update", { connection_changed: connectionChanged });
       if (connectionChanged) this.load();
     }

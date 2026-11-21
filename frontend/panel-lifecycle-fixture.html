@@ -23,7 +23,7 @@
         if (message.type.includes("/delivery/list")) return {jobs: []};
         return {};
       };
-      panel.hass = {connection, callWS};
+      panel.hass = {connection, callWS, systemData: {default_panel: "home/overview"}};
       window.__reloadPanel = () => panel.load();
       window.__panel = panel;
     </script>

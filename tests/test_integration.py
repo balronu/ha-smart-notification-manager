@@ -1,4 +1,5 @@
 from inspect import signature
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -72,7 +73,14 @@ async def test_real_home_assistant_core_lifecycle_isolated(tmp_path):
 
 def test_panel_registration_uses_current_home_assistant_contract():
     parameters = signature(panel_custom.async_register_panel).parameters
-    assert {"hass", "frontend_url_path", "webcomponent_name", "module_url", "require_admin"} <= set(parameters)
+    assert {"hass", "frontend_url_path", "webcomponent_name", "module_url", "require_admin", "handle_safe_area"} <= set(parameters)
+
+
+def test_panel_stays_in_home_assistant_shell_and_uses_safe_area():
+    source = (Path(__file__).parents[1] / "custom_components" / DOMAIN / "__init__.py").read_text(encoding="utf-8")
+    assert "embed_iframe=False" in source
+    assert "handle_safe_area=True" in source
+    assert "smart-notification-manager.js?v=7" in source
 
 
 def test_config_schema_is_a_domain_bound_schema():
