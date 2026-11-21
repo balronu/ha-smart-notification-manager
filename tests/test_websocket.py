@@ -144,6 +144,25 @@ async def test_authenticated_api_round_trip_and_conflict(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_authenticated_api_persists_rule_without_conditions(tmp_path):
+    store = RuleStore(SQLiteRepository(tmp_path / "manager.sqlite3"))
+    hass = SimpleNamespace(data={DOMAIN: {"rule_store": store}})
+    connection = Connection()
+    payload = dict(
+        rule_to_dict(base_rule()),
+        name="Haustür offen",
+        conditions={"kind": "all", "children": []},
+    )
+
+    await implementation(websocket_save)(hass, connection, {"id": 7, "rule": payload})
+
+    assert connection.errors == []
+    saved = await store.async_get(payload["rule_id"])
+    assert saved is not None
+    assert saved.conditions.kind == "all"
+    assert saved.conditions.children == ()
+
+@pytest.mark.asyncio
 async def test_api_returns_safe_error_when_integration_is_missing():
     connection = Connection()
     await implementation(websocket_save)(SimpleNamespace(data={}), connection, {"id": 4, "rule": rule_to_dict(base_rule())})

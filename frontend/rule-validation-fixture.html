@@ -6,11 +6,19 @@
     <script src="smart-notification-manager.js"></script>
     <script>
       const editor = document.querySelector("smart-notification-rule-editor");
-      editor.data = {
-        entities: [{ entity_id: "binary_sensor.haustur_door_sensor", friendly_name: "Door sensor", area_id: "eingang", area_name: "Eingang", state: "off" }],
-        rules: [],
-        onSave: (rule) => { document.body.dataset.saved = "passed"; document.body.dataset.conditions = String(rule.conditions.children.length); }
-      };
+      const entities = [
+        { entity_id: "binary_sensor.haustur_door_sensor", friendly_name: "Door sensor", area_id: "eingang", area_name: "Eingang", state: "off" },
+        { entity_id: "binary_sensor.wohnzimmer_fenster", friendly_name: "Living-room window", area_id: "wohnzimmer", area_name: "Wohnzimmer", state: "off" },
+      ];
+      let rules = [];
+      const applyData = () => editor.data = { entities, rules, onSave: (rule) => {
+        rules = [{ ...structuredClone(rule), rule_id: "fixture-rule" }];
+        document.body.dataset.saved = "passed";
+        document.body.dataset.conditions = String(rule.conditions.children.length);
+        editor._draft = null;
+        applyData();
+      } };
+      applyData();
       editor.open();
     </script>
   </body>
